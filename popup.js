@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", () => {
   chrome.tabs.query({}, (tabs) => {
     tabs.forEach((tab) => {
       const li = document.createElement("li");
+      const div = document.createElement("div");
+      div.className = "tab-container";
       const a = document.createElement("a");
       a.href = "#";
       a.textContent = tab.title;
@@ -16,7 +18,8 @@ document.addEventListener("DOMContentLoaded", () => {
         event.preventDefault();
         chrome.tabs.update(tab.id, { active: true });
       });
-      li.appendChild(a);
+      div.appendChild(a);
+      li.appendChild(div);
       tabList.appendChild(li);
     });
   });
