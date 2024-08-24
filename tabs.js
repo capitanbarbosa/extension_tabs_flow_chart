@@ -1,12 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const tabList = document.getElementById("tabList");
-  if (!tabList) {
-    console.error("tabList element not found");
-    return;
-  }
-
   chrome.tabs.query({}, (tabs) => {
-    console.log("Tabs queried:", tabs); // Debugging line
     const windows = {};
 
     // Group tabs by windowId
@@ -17,7 +10,6 @@ document.addEventListener("DOMContentLoaded", () => {
       windows[tab.windowId].push(tab);
     });
 
-    // Create a container for each window
     Object.keys(windows).forEach((windowId) => {
       const windowContainer = document.createElement("div");
       windowContainer.className = "window-container";
@@ -46,10 +38,33 @@ document.addEventListener("DOMContentLoaded", () => {
           // Add event listeners for drag and drop
           li.addEventListener("dragstart", (event) => {
             event.dataTransfer.setData("text/plain", tab.id);
+            li.classList.add("dragging"); // Add a class for visual feedback
+          });
+
+          li.addEventListener("dragend", () => {
+            li.classList.remove("dragging"); // Remove visual feedback
           });
 
           li.addEventListener("dragover", (event) => {
             event.preventDefault();
+            const draggingElement = document.querySelector(".dragging");
+            const currentElement = li;
+            const isAbove =
+              draggingElement.getBoundingClientRect().top <
+              currentElement.getBoundingClientRect().top;
+
+            // Insert the dragging element before or after the current element
+            if (isAbove) {
+              currentElement.parentNode.insertBefore(
+                draggingElement,
+                currentElement
+              );
+            } else {
+              currentElement.parentNode.insertBefore(
+                draggingElement,
+                currentElement.nextSibling
+              );
+            }
           });
 
           li.addEventListener("drop", (event) => {
@@ -59,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
               `li[data-tab-id="${draggedTabId}"]`
             );
             if (draggedElement) {
-              li.parentNode.insertBefore(draggedElement, li.nextSibling);
+              // Save the new order
               saveTabOrder();
             }
           });
@@ -90,28 +105,28 @@ document.addEventListener("DOMContentLoaded", () => {
         tabList.appendChild(windowContainer);
       });
     });
-
-    function saveTabOrder() {
-      const tabOrder = [];
-      document.querySelectorAll("li[data-tab-id]").forEach((li) => {
-        tabOrder.push(li.dataset.tabId);
-      });
-      chrome.storage.local.set({ tabOrder });
-    }
-
-    function loadTabOrder() {
-      chrome.storage.local.get("tabOrder", (result) => {
-        const tabOrder = result.tabOrder || [];
-        const tabList = document.getElementById("tabList");
-        tabOrder.forEach((tabId) => {
-          const li = document.querySelector(`li[data-tab-id="${tabId}"]`);
-          if (li) {
-            tabList.appendChild(li);
-          }
-        });
-      });
-    }
-
-    loadTabOrder(); // Load the tab order when the page loads
   });
+
+  function saveTabOrder() {
+    const tabOrder = [];
+    document.querySelectorAll("li[data-tab-id]").forEach((li) => {
+      tabOrder.push(li.dataset.tabId);
+    });
+    chrome.storage.local.set({ tabOrder });
+  }
+
+  function loadTabOrder() {
+    chrome.storage.local.get("tabOrder", (result) => {
+      const tabOrder = result.tabOrder || [];
+      const tabList = document.getElementById("tabList");
+      tabOrder.forEach((tabId) => {
+        const li = document.querySelector(`li[data-tab-id="${tabId}"]`);
+        if (li) {
+          tabList.appendChild(li);
+        }
+      });
+    });
+  }
+
+  loadTabOrder(); // Load the tab order when the page loads
 });
