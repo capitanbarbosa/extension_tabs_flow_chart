@@ -12,7 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const a = document.createElement("a");
       a.href = "#";
       a.textContent = tab.title;
-      a.addEventListener("click", () => {
+      a.addEventListener("click", (event) => {
+        event.preventDefault();
         chrome.tabs.update(tab.id, { active: true });
       });
       li.appendChild(a);
