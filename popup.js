@@ -9,7 +9,13 @@ document.addEventListener("DOMContentLoaded", () => {
   chrome.tabs.query({}, (tabs) => {
     tabs.forEach((tab) => {
       const li = document.createElement("li");
-      li.textContent = tab.title;
+      const a = document.createElement("a");
+      a.href = "#";
+      a.textContent = tab.title;
+      a.addEventListener("click", () => {
+        chrome.tabs.update(tab.id, { active: true });
+      });
+      li.appendChild(a);
       tabList.appendChild(li);
     });
   });
