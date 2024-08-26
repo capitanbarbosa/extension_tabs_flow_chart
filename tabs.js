@@ -196,4 +196,50 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   });
+
+  // Tool selector functionality
+  const toolSelector = document.getElementById("toolSelector");
+  let selectedTool = null;
+
+  toolSelector.addEventListener("click", (event) => {
+    if (event.target.tagName === "BUTTON") {
+      selectedTool = event.target.dataset.tool;
+    }
+  });
+
+  flowchartArea.addEventListener("click", (event) => {
+    if (!selectedTool) return;
+
+    const element = document.createElement("div");
+    element.className = "flowchart-tab";
+    element.style.left = `${event.clientX - flowchartArea.offsetLeft}px`;
+    element.style.top = `${event.clientY - flowchartArea.offsetTop}px`;
+
+    switch (selectedTool) {
+      case "text":
+        element.textContent = "Text";
+        element.contentEditable = "true"; // Make the text editable
+        break;
+      case "header":
+        element.innerHTML = "<h1 contenteditable='true'>Header</h1>"; // Make the header editable
+        break;
+      case "box":
+        element.style.width = "100px";
+        element.style.height = "100px";
+        element.style.border = "1px solid #d0d3d9";
+        break;
+      case "arrow":
+        element.innerHTML = "→";
+        element.style.fontSize = "24px";
+        break;
+    }
+
+    // Make the new element draggable
+    element.draggable = true;
+    element.addEventListener("dragstart", (event) => {
+      event.dataTransfer.setData("text/plain", "");
+    });
+
+    flowchartArea.appendChild(element);
+  });
 });

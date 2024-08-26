@@ -18,6 +18,15 @@
         padding: 10px;
         position: relative;
       }
+      #toolSelector {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background-color: #2e2e2e;
+        padding: 10px;
+        border-radius: 5px;
+        z-index: 1000;
+      }
       ul {
         list-style-type: none;
         padding: 0;
@@ -80,7 +89,14 @@
       <h1>Open Tabs Page</h1>
       <ul id="tabList"></ul>
     </div>
-    <div id="flowchartArea"></div>
+    <div id="flowchartArea">
+      <div id="toolSelector">
+        <button data-tool="text">Text</button>
+        <button data-tool="header">Header</button>
+        <button data-tool="box">Box</button>
+        <button data-tool="arrow">Arrow</button>
+      </div>
+    </div>
     <script src="tabs.js"></script>
   </body>
 </html>
