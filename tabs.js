@@ -193,7 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
           event.dataTransfer.setData(
             "text/plain",
             JSON.stringify({
-              id: flowchartTab.dataset.tabId || "",
+              id: flowchartTab.dataset.tabId,
               offsetX: event.clientX - rect.left,
               offsetY: event.clientY - rect.top,
             })
@@ -233,6 +233,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const element = document.createElement("div");
     element.className = "flowchart-tab";
+    element.dataset.tabId = Date.now().toString(); // Add this line to generate a unique ID
     element.style.left = `${event.clientX - flowchartArea.offsetLeft}px`;
     element.style.top = `${event.clientY - flowchartArea.offsetTop}px`;
 
@@ -297,34 +298,6 @@ document.addEventListener("DOMContentLoaded", () => {
         event.clientY - data.offsetY - flowchartArea.offsetTop
       }px`;
       draggingElement.classList.remove("dragging");
-    } else {
-      // Handle the case where the element is not found
-      const newElement = document.createElement("div");
-      newElement.className = "flowchart-tab";
-      newElement.dataset.tabId = data.id;
-      newElement.style.left = `${
-        event.clientX - data.offsetX - flowchartArea.offsetLeft
-      }px`;
-      newElement.style.top = `${
-        event.clientY - data.offsetY - flowchartArea.offsetTop
-      }px`;
-      newElement.draggable = true;
-      newElement.addEventListener("dragstart", (event) => {
-        const rect = newElement.getBoundingClientRect();
-        event.dataTransfer.setData(
-          "text/plain",
-          JSON.stringify({
-            id: newElement.dataset.tabId || "",
-            offsetX: event.clientX - rect.left,
-            offsetY: event.clientY - rect.top,
-          })
-        );
-        newElement.classList.add("dragging");
-      });
-      newElement.addEventListener("dragend", () => {
-        newElement.classList.remove("dragging");
-      });
-      flowchartArea.appendChild(newElement);
     }
   });
 });
