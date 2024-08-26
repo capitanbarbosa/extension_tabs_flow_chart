@@ -146,23 +146,42 @@ document.addEventListener("DOMContentLoaded", () => {
   flowchartArea.addEventListener("drop", (event) => {
     event.preventDefault();
     const draggedTabId = event.dataTransfer.getData("text/plain");
-    const draggedElement = document.querySelector(
-      `li[data-tab-id="${draggedTabId}"]`
+    const existingFlowchartTab = document.querySelector(
+      `.flowchart-tab[data-tab-id="${draggedTabId}"]`
     );
-    if (draggedElement) {
-      const flowchartTab = document.createElement("div");
-      flowchartTab.className = "flowchart-tab";
-      flowchartTab.textContent = draggedElement.querySelector("a").textContent;
-      flowchartTab.style.left = `${event.clientX - flowchartArea.offsetLeft}px`;
-      flowchartTab.style.top = `${event.clientY - flowchartArea.offsetTop}px`;
 
-      // Make the flowchart tab draggable within the flowchart area
-      flowchartTab.draggable = true;
-      flowchartTab.addEventListener("dragstart", (event) => {
-        event.dataTransfer.setData("text/plain", draggedTabId);
-      });
+    if (existingFlowchartTab) {
+      // Move the existing flowchart tab
+      existingFlowchartTab.style.left = `${
+        event.clientX - flowchartArea.offsetLeft
+      }px`;
+      existingFlowchartTab.style.top = `${
+        event.clientY - flowchartArea.offsetTop
+      }px`;
+    } else {
+      // Create a new flowchart tab
+      const draggedElement = document.querySelector(
+        `li[data-tab-id="${draggedTabId}"]`
+      );
+      if (draggedElement) {
+        const flowchartTab = document.createElement("div");
+        flowchartTab.className = "flowchart-tab";
+        flowchartTab.dataset.tabId = draggedTabId; // Set a data attribute for the tab ID
+        flowchartTab.textContent =
+          draggedElement.querySelector("a").textContent;
+        flowchartTab.style.left = `${
+          event.clientX - flowchartArea.offsetLeft
+        }px`;
+        flowchartTab.style.top = `${event.clientY - flowchartArea.offsetTop}px`;
 
-      flowchartArea.appendChild(flowchartTab);
+        // Make the flowchart tab draggable within the flowchart area
+        flowchartTab.draggable = true;
+        flowchartTab.addEventListener("dragstart", (event) => {
+          event.dataTransfer.setData("text/plain", draggedTabId);
+        });
+
+        flowchartArea.appendChild(flowchartTab);
+      }
     }
   });
 });
