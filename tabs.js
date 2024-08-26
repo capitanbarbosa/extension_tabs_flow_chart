@@ -167,8 +167,20 @@ document.addEventListener("DOMContentLoaded", () => {
         const flowchartTab = document.createElement("div");
         flowchartTab.className = "flowchart-tab";
         flowchartTab.dataset.tabId = draggedTabId; // Set a data attribute for the tab ID
-        flowchartTab.textContent =
-          draggedElement.querySelector("a").textContent;
+
+        const img = document.createElement("img");
+        img.src = draggedElement.querySelector("img").src;
+        img.alt = "Tab Icon";
+        img.style.width = "16px";
+        img.style.height = "16px";
+        img.style.marginRight = "8px";
+
+        const text = document.createElement("span");
+        text.textContent = draggedElement.querySelector("a").textContent;
+
+        flowchartTab.appendChild(img);
+        flowchartTab.appendChild(text);
+
         flowchartTab.style.left = `${
           event.clientX - flowchartArea.offsetLeft
         }px`;
