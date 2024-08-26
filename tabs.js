@@ -112,6 +112,12 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("li[data-tab-id]").forEach((li) => {
       tabOrder.push(li.dataset.tabId);
     });
+
+    // Move tabs in the new order
+    tabOrder.forEach((tabId, index) => {
+      chrome.tabs.move(parseInt(tabId), { index });
+    });
+
     chrome.storage.local.set({ tabOrder });
   }
 
