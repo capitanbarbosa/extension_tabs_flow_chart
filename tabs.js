@@ -169,9 +169,14 @@ document.addEventListener("DOMContentLoaded", () => {
         element.style.width = item.width;
         element.style.height = item.height;
 
-        // Make the element draggable
-        element.draggable = true;
-        element.addEventListener("dragstart", (event) => {
+        // Create the drag handle
+        const handle = document.createElement("div");
+        handle.className = "drag-handle";
+        element.appendChild(handle);
+
+        // Make the handle draggable
+        handle.draggable = true;
+        handle.addEventListener("dragstart", (event) => {
           const rect = element.getBoundingClientRect();
           event.dataTransfer.setData(
             "text/plain",
@@ -184,7 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
           element.classList.add("dragging");
         });
 
-        element.addEventListener("dragend", () => {
+        handle.addEventListener("dragend", () => {
           element.classList.remove("dragging");
         });
 
@@ -238,14 +243,19 @@ document.addEventListener("DOMContentLoaded", () => {
         flowchartTab.appendChild(img);
         flowchartTab.appendChild(text);
 
+        // Create the drag handle
+        const handle = document.createElement("div");
+        handle.className = "drag-handle";
+        flowchartTab.appendChild(handle);
+
         flowchartTab.style.left = `${
           event.clientX - flowchartArea.offsetLeft
         }px`;
         flowchartTab.style.top = `${event.clientY - flowchartArea.offsetTop}px`;
 
         // Make the flowchart tab draggable within the flowchart area
-        flowchartTab.draggable = true;
-        flowchartTab.addEventListener("dragstart", (event) => {
+        handle.draggable = true;
+        handle.addEventListener("dragstart", (event) => {
           const rect = flowchartTab.getBoundingClientRect();
           event.dataTransfer.setData(
             "text/plain",
@@ -258,8 +268,16 @@ document.addEventListener("DOMContentLoaded", () => {
           flowchartTab.classList.add("dragging");
         });
 
-        flowchartTab.addEventListener("dragend", () => {
+        handle.addEventListener("dragend", () => {
           flowchartTab.classList.remove("dragging");
+        });
+
+        // Make the flowchart tab clickable to shift focus
+        flowchartTab.addEventListener("click", (event) => {
+          event.preventDefault();
+          chrome.tabs.update(parseInt(flowchartTab.dataset.tabId), {
+            active: true,
+          });
         });
 
         flowchartArea.appendChild(flowchartTab);
@@ -281,7 +299,6 @@ document.addEventListener("DOMContentLoaded", () => {
   flowchartArea.addEventListener("click", (event) => {
     if (!selectedTool || selectedTool === "move") return;
 
-    // Prevent creating a new element if clicking inside an existing editable element
     if (
       event.target.closest(".flowchart-tab[contenteditable='true']") ||
       event.target.closest(".flowchart-tab h1[contenteditable='true']")
@@ -291,23 +308,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const element = document.createElement("div");
     element.className = "flowchart-tab";
-    element.dataset.tabId = Date.now().toString(); // Add this line to generate a unique ID
+    element.dataset.tabId = Date.now().toString();
     element.style.left = `${event.clientX - flowchartArea.offsetLeft}px`;
     element.style.top = `${event.clientY - flowchartArea.offsetTop}px`;
 
     switch (selectedTool) {
       case "text":
         element.textContent = "Text";
-        element.contentEditable = "true"; // Make the text editable
+        element.contentEditable = "true";
         break;
       case "header":
-        element.innerHTML = "<h1 contenteditable='true'>Header</h1>"; // Make the header editable
+        element.innerHTML = "<h1 contenteditable='true'>Header</h1>";
         break;
       case "box":
         element.style.width = "100px";
         element.style.height = "100px";
-        element.style.border = "2px dashed #d0d3d9"; // Dashed border for the box
-        element.style.backgroundColor = "transparent"; // Transparent background
+        element.style.border = "2px dashed #d0d3d9";
+        element.style.backgroundColor = "transparent";
         break;
       case "arrow":
         element.innerHTML = "→";
@@ -315,9 +332,14 @@ document.addEventListener("DOMContentLoaded", () => {
         break;
     }
 
-    // Make the new element draggable
-    element.draggable = true;
-    element.addEventListener("dragstart", (event) => {
+    // Create the drag handle
+    const handle = document.createElement("div");
+    handle.className = "drag-handle";
+    element.appendChild(handle);
+
+    // Make the handle draggable
+    handle.draggable = true;
+    handle.addEventListener("dragstart", (event) => {
       const rect = element.getBoundingClientRect();
       event.dataTransfer.setData(
         "text/plain",
@@ -330,7 +352,7 @@ document.addEventListener("DOMContentLoaded", () => {
       element.classList.add("dragging");
     });
 
-    element.addEventListener("dragend", () => {
+    handle.addEventListener("dragend", () => {
       element.classList.remove("dragging");
     });
 
