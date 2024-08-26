@@ -158,46 +158,23 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.storage.local.get("flowchartState", (result) => {
       const flowchartState = result.flowchartState || [];
       const flowchartArea = document.getElementById("flowchartArea");
+      const toolSelector = document.getElementById("toolSelector");
+
+      // Clear existing flowchart elements while preserving the tool selector
+      while (flowchartArea.firstChild) {
+        if (flowchartArea.firstChild !== toolSelector) {
+          flowchartArea.removeChild(flowchartArea.firstChild);
+        } else {
+          break;
+        }
+      }
 
       flowchartState.forEach((item) => {
-        const element = document.createElement("div");
-        element.className = "flowchart-tab";
-        element.dataset.tabId = item.id;
-        element.style.left = item.left;
-        element.style.top = item.top;
-        element.innerHTML = item.content;
-        element.style.width = item.width;
-        element.style.height = item.height;
-
-        // Create the drag handle
-        const handle = document.createElement("div");
-        handle.className = "drag-handle";
-        element.appendChild(handle);
-
-        // Make the handle draggable
-        handle.draggable = true;
-        handle.addEventListener("dragstart", (event) => {
-          const rect = element.getBoundingClientRect();
-          event.dataTransfer.setData(
-            "text/plain",
-            JSON.stringify({
-              id: element.dataset.tabId,
-              offsetX: event.clientX - rect.left,
-              offsetY: event.clientY - rect.top,
-            })
-          );
-          element.classList.add("dragging");
-        });
-
-        handle.addEventListener("dragend", () => {
-          element.classList.remove("dragging");
-        });
-
+        const element = createFlowchartElement(item);
         flowchartArea.appendChild(element);
       });
     });
   }
-
   // Handle drag and drop into the flowchart area
   const flowchartArea = document.getElementById("flowchartArea");
 
@@ -481,6 +458,15 @@ document.addEventListener("DOMContentLoaded", () => {
     element.addEventListener("dragend", () => {
       element.classList.remove("dragging");
     });
+
+    // Add click event listener for the tab
+    const tabLink = element.querySelector("span");
+    if (tabLink) {
+      tabLink.addEventListener("click", (event) => {
+        event.preventDefault();
+        chrome.tabs.update(parseInt(element.dataset.tabId), { active: true });
+      });
+    }
 
     return element;
   }
