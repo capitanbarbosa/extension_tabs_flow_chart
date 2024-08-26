@@ -135,4 +135,34 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   loadTabOrder(); // Load the tab order when the page loads
+
+  // Handle drag and drop into the flowchart area
+  const flowchartArea = document.getElementById("flowchartArea");
+
+  flowchartArea.addEventListener("dragover", (event) => {
+    event.preventDefault();
+  });
+
+  flowchartArea.addEventListener("drop", (event) => {
+    event.preventDefault();
+    const draggedTabId = event.dataTransfer.getData("text/plain");
+    const draggedElement = document.querySelector(
+      `li[data-tab-id="${draggedTabId}"]`
+    );
+    if (draggedElement) {
+      const flowchartTab = document.createElement("div");
+      flowchartTab.className = "flowchart-tab";
+      flowchartTab.textContent = draggedElement.querySelector("a").textContent;
+      flowchartTab.style.left = `${event.clientX - flowchartArea.offsetLeft}px`;
+      flowchartTab.style.top = `${event.clientY - flowchartArea.offsetTop}px`;
+
+      // Make the flowchart tab draggable within the flowchart area
+      flowchartTab.draggable = true;
+      flowchartTab.addEventListener("dragstart", (event) => {
+        event.dataTransfer.setData("text/plain", draggedTabId);
+      });
+
+      flowchartArea.appendChild(flowchartTab);
+    }
+  });
 });
