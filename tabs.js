@@ -216,7 +216,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!selectedTool || selectedTool === "move") return;
 
     // Prevent creating a new element if clicking inside an existing editable element
-    if (event.target.closest(".flowchart-tab[contenteditable='true']")) {
+    if (
+      event.target.closest(".flowchart-tab[contenteditable='true']") ||
+      event.target.closest(".flowchart-tab h1[contenteditable='true']")
+    ) {
       return;
     }
 
