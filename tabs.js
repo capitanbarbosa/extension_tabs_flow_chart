@@ -210,6 +210,11 @@ document.addEventListener("DOMContentLoaded", () => {
   flowchartArea.addEventListener("click", (event) => {
     if (!selectedTool) return;
 
+    // Prevent creating a new element if clicking inside an existing editable element
+    if (event.target.closest(".flowchart-tab[contenteditable='true']")) {
+      return;
+    }
+
     const element = document.createElement("div");
     element.className = "flowchart-tab";
     element.style.left = `${event.clientX - flowchartArea.offsetLeft}px`;
@@ -237,7 +242,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Make the new element draggable
     element.draggable = true;
     element.addEventListener("dragstart", (event) => {
-      event.dataTransfer.setData("text/plain", "");
+      event.dataTransfer.setData("text/plain", element.dataset.tabId || "");
     });
 
     flowchartArea.appendChild(element);
