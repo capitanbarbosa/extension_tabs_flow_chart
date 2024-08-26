@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   loadFlowchartState();
+  displayCurrentState();
 
   chrome.tabs.query({}, (tabs) => {
     const windows = {};
@@ -382,16 +383,38 @@ document.addEventListener("DOMContentLoaded", () => {
       height: el.style.height,
     }));
 
-    const stateName = prompt("Enter a name for this state:");
-    if (stateName) {
-      chrome.storage.local.get("savedStates", (result) => {
-        const savedStates = result.savedStates || {};
-        savedStates[stateName] = flowchartState;
-        chrome.storage.local.set({ savedStates }, () => {
-          alert("State saved successfully!");
+    chrome.storage.local.get("currentState", (result) => {
+      const currentState = result.currentState;
+      if (currentState) {
+        const overwrite = confirm(
+          `Do you want to overwrite the current state "${currentState}"?`
+        );
+        if (overwrite) {
+          chrome.storage.local.get("savedStates", (result) => {
+            const savedStates = result.savedStates || {};
+            savedStates[currentState] = flowchartState;
+            chrome.storage.local.set({ savedStates }, () => {
+              alert("State saved successfully!");
+            });
+          });
+          return;
+        }
+      }
+
+      const stateName = prompt("Enter a name for this state:");
+      if (stateName) {
+        chrome.storage.local.get("savedStates", (result) => {
+          const savedStates = result.savedStates || {};
+          savedStates[stateName] = flowchartState;
+          chrome.storage.local.set(
+            { savedStates, currentState: stateName },
+            () => {
+              alert("State saved successfully!");
+            }
+          );
         });
-      });
-    }
+      }
+    });
   }
 
   function loadState() {
@@ -415,9 +438,23 @@ document.addEventListener("DOMContentLoaded", () => {
           const element = createFlowchartElement(item);
           flowchartArea.appendChild(element);
         });
-        alert("State loaded successfully!");
+        chrome.storage.local.set({ currentState: stateName }, () => {
+          alert("State loaded successfully!");
+        });
       } else if (stateName) {
         alert("State not found.");
+      }
+    });
+  }
+
+  function displayCurrentState() {
+    chrome.storage.local.get("currentState", (result) => {
+      const currentState = result.currentState;
+      const stateDisplay = document.getElementById("currentStateDisplay");
+      if (currentState) {
+        stateDisplay.textContent = `Current State: ${currentState}`;
+      } else {
+        stateDisplay.textContent = "No state loaded";
       }
     });
   }
