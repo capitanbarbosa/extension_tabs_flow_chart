@@ -360,4 +360,106 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     saveFlowchartState();
   });
+
+  // Add event listeners for the new buttons
+  const saveStateButton = document.getElementById("saveState");
+  const loadStateButton = document.getElementById("loadState");
+  const clearBoardButton = document.getElementById("clearBoard");
+
+  saveStateButton.addEventListener("click", saveState);
+  loadStateButton.addEventListener("click", loadState);
+  clearBoardButton.addEventListener("click", clearBoard);
+
+  function saveState() {
+    const flowchartState = Array.from(
+      document.querySelectorAll(".flowchart-tab")
+    ).map((el) => ({
+      id: el.dataset.tabId,
+      type: el.classList.contains("flowchart-tab") ? "tab" : "element",
+      left: el.style.left,
+      top: el.style.top,
+      content: el.innerHTML,
+      width: el.style.width,
+      height: el.style.height,
+    }));
+
+    const stateName = prompt("Enter a name for this state:");
+    if (stateName) {
+      chrome.storage.local.get("savedStates", (result) => {
+        const savedStates = result.savedStates || {};
+        savedStates[stateName] = flowchartState;
+        chrome.storage.local.set({ savedStates }, () => {
+          alert("State saved successfully!");
+        });
+      });
+    }
+  }
+
+  function loadState() {
+    chrome.storage.local.get("savedStates", (result) => {
+      const savedStates = result.savedStates || {};
+      const stateNames = Object.keys(savedStates);
+
+      if (stateNames.length === 0) {
+        alert("No saved states found.");
+        return;
+      }
+
+      const stateName = prompt(
+        "Enter the name of the state to load:\n\nAvailable states:\n" +
+          stateNames.join("\n")
+      );
+      if (stateName && savedStates[stateName]) {
+        clearBoard();
+        const flowchartArea = document.getElementById("flowchartArea");
+        savedStates[stateName].forEach((item) => {
+          const element = createFlowchartElement(item);
+          flowchartArea.appendChild(element);
+        });
+        alert("State loaded successfully!");
+      } else if (stateName) {
+        alert("State not found.");
+      }
+    });
+  }
+
+  function clearBoard() {
+    const flowchartArea = document.getElementById("flowchartArea");
+    const flowchartElements = flowchartArea.querySelectorAll(".flowchart-tab");
+    flowchartElements.forEach((element) => {
+      flowchartArea.removeChild(element);
+    });
+  }
+
+  function createFlowchartElement(item) {
+    const element = document.createElement("div");
+    element.className = "flowchart-tab";
+    element.dataset.tabId = item.id;
+    element.style.left = item.left;
+    element.style.top = item.top;
+    element.innerHTML = item.content;
+    element.style.width = item.width;
+    element.style.height = item.height;
+
+    // Make the element draggable
+    element.draggable = true;
+    element.addEventListener("dragstart", (event) => {
+      const rect = element.getBoundingClientRect();
+      event.dataTransfer.setData(
+        "text/plain",
+        JSON.stringify({
+          id: element.dataset.tabId,
+          offsetX: event.clientX - rect.left,
+          offsetY: event.clientY - rect.top,
+        })
+      );
+      element.classList.add("dragging");
+    });
+
+    element.addEventListener("dragend", () => {
+      element.classList.remove("dragging");
+    });
+
+    return element;
+  }
 });
