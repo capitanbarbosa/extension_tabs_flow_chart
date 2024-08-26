@@ -190,6 +190,11 @@ document.addEventListener("DOMContentLoaded", () => {
         flowchartTab.draggable = true;
         flowchartTab.addEventListener("dragstart", (event) => {
           event.dataTransfer.setData("text/plain", draggedTabId);
+          flowchartTab.classList.add("dragging");
+        });
+
+        flowchartTab.addEventListener("dragend", () => {
+          flowchartTab.classList.remove("dragging");
         });
 
         flowchartArea.appendChild(flowchartTab);
@@ -242,9 +247,33 @@ document.addEventListener("DOMContentLoaded", () => {
     // Make the new element draggable
     element.draggable = true;
     element.addEventListener("dragstart", (event) => {
-      event.dataTransfer.setData("text/plain", element.dataset.tabId || "");
+      event.dataTransfer.setData("text/plain", "");
+      element.classList.add("dragging");
+    });
+
+    element.addEventListener("dragend", () => {
+      element.classList.remove("dragging");
     });
 
     flowchartArea.appendChild(element);
+  });
+
+  // Allow moving of created elements
+  flowchartArea.addEventListener("dragover", (event) => {
+    event.preventDefault();
+  });
+
+  flowchartArea.addEventListener("drop", (event) => {
+    event.preventDefault();
+    const draggingElement = document.querySelector(".dragging");
+    if (draggingElement) {
+      draggingElement.style.left = `${
+        event.clientX - flowchartArea.offsetLeft
+      }px`;
+      draggingElement.style.top = `${
+        event.clientY - flowchartArea.offsetTop
+      }px`;
+      draggingElement.classList.remove("dragging");
+    }
   });
 });
