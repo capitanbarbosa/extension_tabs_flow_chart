@@ -239,7 +239,8 @@ document.addEventListener("DOMContentLoaded", () => {
       case "box":
         element.style.width = "100px";
         element.style.height = "100px";
-        element.style.border = "1px solid #d0d3d9";
+        element.style.border = "2px dashed #d0d3d9"; // Dashed border for the box
+        element.style.backgroundColor = "transparent"; // Transparent background
         break;
       case "arrow":
         element.innerHTML = "→";
