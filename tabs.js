@@ -1,4 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
+  loadFlowchartState();
+
   chrome.tabs.query({}, (tabs) => {
     const windows = {};
 
@@ -136,6 +138,61 @@ document.addEventListener("DOMContentLoaded", () => {
 
   loadTabOrder(); // Load the tab order when the page loads
 
+  function saveFlowchartState() {
+    const flowchartElements = Array.from(
+      document.querySelectorAll(".flowchart-tab")
+    ).map((el) => ({
+      id: el.dataset.tabId,
+      type: el.classList.contains("flowchart-tab") ? "tab" : "element",
+      left: el.style.left,
+      top: el.style.top,
+      content: el.innerHTML,
+      width: el.style.width,
+      height: el.style.height,
+    }));
+
+    chrome.storage.local.set({ flowchartState: flowchartElements });
+  }
+
+  function loadFlowchartState() {
+    chrome.storage.local.get("flowchartState", (result) => {
+      const flowchartState = result.flowchartState || [];
+      const flowchartArea = document.getElementById("flowchartArea");
+
+      flowchartState.forEach((item) => {
+        const element = document.createElement("div");
+        element.className = "flowchart-tab";
+        element.dataset.tabId = item.id;
+        element.style.left = item.left;
+        element.style.top = item.top;
+        element.innerHTML = item.content;
+        element.style.width = item.width;
+        element.style.height = item.height;
+
+        // Make the element draggable
+        element.draggable = true;
+        element.addEventListener("dragstart", (event) => {
+          const rect = element.getBoundingClientRect();
+          event.dataTransfer.setData(
+            "text/plain",
+            JSON.stringify({
+              id: element.dataset.tabId,
+              offsetX: event.clientX - rect.left,
+              offsetY: event.clientY - rect.top,
+            })
+          );
+          element.classList.add("dragging");
+        });
+
+        element.addEventListener("dragend", () => {
+          element.classList.remove("dragging");
+        });
+
+        flowchartArea.appendChild(element);
+      });
+    });
+  }
+
   // Handle drag and drop into the flowchart area
   const flowchartArea = document.getElementById("flowchartArea");
 
@@ -208,6 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
         flowchartArea.appendChild(flowchartTab);
       }
     }
+    saveFlowchartState();
   });
 
   // Tool selector functionality
@@ -277,6 +335,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     flowchartArea.appendChild(element);
+    saveFlowchartState();
   });
 
   // Allow moving of created elements
@@ -299,5 +358,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }px`;
       draggingElement.classList.remove("dragging");
     }
+    saveFlowchartState();
   });
 });
