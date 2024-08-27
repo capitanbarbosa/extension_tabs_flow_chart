@@ -566,4 +566,53 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   window.addEventListener("beforeunload", saveCurrentState);
+
+  let firstHandle = null;
+
+  flowchartArea.addEventListener("click", (event) => {
+    if (selectedTool === "relationship") {
+      const handle = event.target.closest(".drag-handle");
+      if (handle) {
+        if (!firstHandle) {
+          firstHandle = handle;
+        } else {
+          createArrow(firstHandle, handle);
+          firstHandle = null;
+        }
+      }
+    }
+  });
+
+  function createArrow(startHandle, endHandle) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+
+    const rect1 = startHandle.getBoundingClientRect();
+    const rect2 = endHandle.getBoundingClientRect();
+    const x1 =
+      rect1.left + rect1.width / 2 - flowchartArea.getBoundingClientRect().left;
+    const y1 =
+      rect1.top + rect1.height / 2 - flowchartArea.getBoundingClientRect().top;
+    const x2 =
+      rect2.left + rect2.width / 2 - flowchartArea.getBoundingClientRect().left;
+    const y2 =
+      rect2.top + rect2.height / 2 - flowchartArea.getBoundingClientRect().top;
+
+    svg.style.position = "absolute";
+    svg.style.left = "0";
+    svg.style.top = "0";
+    svg.style.width = "100%";
+    svg.style.height = "100%";
+    svg.style.pointerEvents = "none"; // Make sure the SVG doesn't interfere with other elements
+
+    line.setAttribute("x1", x1);
+    line.setAttribute("y1", y1);
+    line.setAttribute("x2", x2);
+    line.setAttribute("y2", y2);
+    line.setAttribute("stroke", "#61afef");
+    line.setAttribute("stroke-width", "2");
+
+    svg.appendChild(line);
+    flowchartArea.appendChild(svg);
+  }
 });
