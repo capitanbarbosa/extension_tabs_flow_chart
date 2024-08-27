@@ -665,6 +665,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Save the arrow relationship
     saveArrowRelationship(startTab, endTab);
   }
+
   function saveArrowRelationship(startTab, endTab) {
     const arrow = {
       startId: startTab.dataset.tabId,
@@ -682,14 +683,14 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.storage.local.get("arrowRelationships", (result) => {
       const arrowRelationships = result.arrowRelationships || [];
       arrowRelationships.forEach((arrow) => {
-        const startHandle = document.querySelector(
-          `.flowchart-tab[data-tab-id="${arrow.startId}"] .drag-handle`
+        const startTab = document.querySelector(
+          `.flowchart-tab[data-tab-id="${arrow.startId}"]`
         );
-        const endHandle = document.querySelector(
-          `.flowchart-tab[data-tab-id="${arrow.endId}"] .drag-handle`
+        const endTab = document.querySelector(
+          `.flowchart-tab[data-tab-id="${arrow.endId}"]`
         );
-        if (startHandle && endHandle) {
-          createArrow(startHandle, endHandle);
+        if (startTab && endTab) {
+          createArrow(startTab, endTab);
         }
       });
     });
