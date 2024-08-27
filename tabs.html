@@ -89,13 +89,23 @@
       }
       .flowchart-tab {
         position: absolute;
-        border: 1px solid #d0d3d9;
-        padding: 5px;
-        border-radius: 5px;
         background-color: #2e2e2e;
+        border: 1px solid #d0d3d9;
+        border-radius: 5px;
+        padding: 5px 10px 5px 20px; /* Increased left padding to accommodate the handle */
         cursor: move;
-        /* Add this line to position the delete button */
-        overflow: visible;
+        max-width: 200px; /* Set a maximum width */
+        width: auto; /* Allow the width to adjust based on content */
+        white-space: nowrap; /* Prevent text from wrapping */
+        overflow: hidden; /* Hide overflowing text */
+        text-overflow: ellipsis; /* Add ellipsis for overflowing text */
+      }
+      .flowchart-tab h1 {
+        font-size: 16px;
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       .delete-button {
         position: absolute;
@@ -116,15 +126,16 @@
 
       /* Add this CSS for the handle */
       .drag-handle {
-        width: 10px;
-        height: 10px;
+        width: 12px;
+        height: 12px;
         background-color: #61afef;
         border-radius: 50%;
         position: absolute;
-        left: -15px; /* Adjust as needed */
+        left: 2px; /* Move the handle slightly inside the tab */
         top: 50%;
         transform: translateY(-50%);
         cursor: move;
+        z-index: 10;
       }
       .selected-tool {
         background-color: #61afef;
@@ -147,6 +158,10 @@
 
       ::-webkit-scrollbar-thumb:hover {
         background-color: #555;
+      }
+
+      .relationship-start {
+        box-shadow: 0 0 0 2px #61afef;
       }
     </style>
   </head>

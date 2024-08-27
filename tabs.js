@@ -302,58 +302,71 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const element = document.createElement("div");
-    element.className = "flowchart-tab";
-    element.dataset.tabId = Date.now().toString();
-    element.style.left = `${event.clientX - flowchartArea.offsetLeft}px`;
-    element.style.top = `${event.clientY - flowchartArea.offsetTop}px`;
+    // Only create new elements if the tool is not "relationship"
+    if (selectedTool !== "relationship") {
+      const element = document.createElement("div");
+      element.className = "flowchart-tab";
+      element.dataset.tabId = Date.now().toString();
+      element.style.left = `${event.clientX - flowchartArea.offsetLeft}px`;
+      element.style.top = `${event.clientY - flowchartArea.offsetTop}px`;
 
-    switch (selectedTool) {
-      case "text":
-        element.textContent = "-\u00A0\u00A0\u00A0\u00A0";
-        element.contentEditable = "true";
-        break;
-      case "header":
-        element.innerHTML = "<h1 contenteditable='true'>Header</h1>";
-        break;
-      case "box":
-        element.style.width = "100px";
-        element.style.height = "100px";
-        element.style.border = "2px dashed #d0d3d9";
-        element.style.backgroundColor = "transparent";
-        break;
-      case "arrow":
-        element.innerHTML = "→";
-        element.style.fontSize = "24px";
-        break;
+      switch (selectedTool) {
+        case "text":
+          element.textContent = "-\u00A0\u00A0\u00A0\u00A0";
+          element.contentEditable = "true";
+          break;
+        case "header":
+          element.innerHTML = "<h1 contenteditable='true'>Header</h1>";
+          break;
+        case "box":
+          element.classList.add("box-element");
+          element.style.border = "2px dashed #d0d3d9";
+          element.style.backgroundColor = "transparent";
+          break;
+        case "arrow":
+          element.innerHTML = "→";
+          element.style.fontSize = "24px";
+          break;
+      }
+
+      // Create the drag handle
+      const handle = document.createElement("div");
+      handle.className = "drag-handle";
+      element.appendChild(handle);
+
+      // Make the handle draggable
+      handle.draggable = true;
+      handle.addEventListener("dragstart", (event) => {
+        const rect = element.getBoundingClientRect();
+        event.dataTransfer.setData(
+          "text/plain",
+          JSON.stringify({
+            id: element.dataset.tabId || "",
+            offsetX: event.clientX - rect.left,
+            offsetY: event.clientY - rect.top,
+          })
+        );
+        element.classList.add("dragging");
+      });
+
+      handle.addEventListener("dragend", () => {
+        element.classList.remove("dragging");
+      });
+
+      flowchartArea.appendChild(element);
+      saveFlowchartState();
+    } else if (selectedTool === "relationship") {
+      // Handle relationship tool logic here
+      const handle = event.target.closest(".drag-handle");
+      if (handle) {
+        if (!firstHandle) {
+          firstHandle = handle;
+        } else {
+          createArrow(firstHandle, handle);
+          firstHandle = null; // Reset firstHandle after creating the arrow
+        }
+      }
     }
-
-    // Create the drag handle
-    const handle = document.createElement("div");
-    handle.className = "drag-handle";
-    element.appendChild(handle);
-
-    // Make the handle draggable
-    handle.draggable = true;
-    handle.addEventListener("dragstart", (event) => {
-      const rect = element.getBoundingClientRect();
-      event.dataTransfer.setData(
-        "text/plain",
-        JSON.stringify({
-          id: element.dataset.tabId || "",
-          offsetX: event.clientX - rect.left,
-          offsetY: event.clientY - rect.top,
-        })
-      );
-      element.classList.add("dragging");
-    });
-
-    handle.addEventListener("dragend", () => {
-      element.classList.remove("dragging");
-    });
-
-    flowchartArea.appendChild(element);
-    saveFlowchartState();
   });
 
   // Allow moving of created elements
@@ -568,43 +581,49 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.addEventListener("beforeunload", saveCurrentState);
 
-  let firstHandle = null;
+  let firstTab = null;
 
   flowchartArea.addEventListener("click", (event) => {
     if (selectedTool === "relationship") {
-      const handle = event.target.closest(".drag-handle");
-      if (handle) {
-        if (!firstHandle) {
-          firstHandle = handle;
-        } else {
-          createArrow(firstHandle, handle);
-          firstHandle = null;
+      event.preventDefault();
+      event.stopPropagation();
+      const clickedTab = event.target.closest(".flowchart-tab");
+      if (clickedTab) {
+        if (!firstTab) {
+          firstTab = clickedTab;
+          firstTab.classList.add("relationship-start");
+        } else if (clickedTab !== firstTab) {
+          createArrow(firstTab, clickedTab);
+          firstTab.classList.remove("relationship-start");
+          firstTab = null;
         }
       }
     }
   });
 
-  function createArrow(startHandle, endHandle) {
+  function createArrow(startTab, endTab) {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
 
-    const rect1 = startHandle.getBoundingClientRect();
-    const rect2 = endHandle.getBoundingClientRect();
-    const x1 =
-      rect1.left + rect1.width / 2 - flowchartArea.getBoundingClientRect().left;
-    const y1 =
-      rect1.top + rect1.height / 2 - flowchartArea.getBoundingClientRect().top;
-    const x2 =
-      rect2.left + rect2.width / 2 - flowchartArea.getBoundingClientRect().left;
-    const y2 =
-      rect2.top + rect2.height / 2 - flowchartArea.getBoundingClientRect().top;
+    const startHandle = startTab.querySelector(".drag-handle");
+    const endHandle = endTab.querySelector(".drag-handle");
+
+    const startRect = startHandle.getBoundingClientRect();
+    const endRect = endHandle.getBoundingClientRect();
+    const flowchartRect = flowchartArea.getBoundingClientRect();
+
+    const x1 = startRect.left + startRect.width / 2 - flowchartRect.left;
+    const y1 = startRect.top + startRect.height / 2 - flowchartRect.top;
+    const x2 = endRect.left + endRect.width / 2 - flowchartRect.left;
+    const y2 = endRect.top + endRect.height / 2 - flowchartRect.top;
 
     svg.style.position = "absolute";
     svg.style.left = "0";
     svg.style.top = "0";
     svg.style.width = "100%";
     svg.style.height = "100%";
-    svg.style.pointerEvents = "none"; // Make sure the SVG doesn't interfere with other elements
+    svg.style.pointerEvents = "none";
+    svg.classList.add("relationship-arrow");
 
     line.setAttribute("x1", x1);
     line.setAttribute("y1", y1);
@@ -617,13 +636,12 @@ document.addEventListener("DOMContentLoaded", () => {
     flowchartArea.appendChild(svg);
 
     // Save the arrow relationship
-    saveArrowRelationship(startHandle, endHandle);
+    saveArrowRelationship(startTab, endTab);
   }
-
-  function saveArrowRelationship(startHandle, endHandle) {
+  function saveArrowRelationship(startTab, endTab) {
     const arrow = {
-      startId: startHandle.closest(".flowchart-tab").dataset.tabId,
-      endId: endHandle.closest(".flowchart-tab").dataset.tabId,
+      startId: startTab.dataset.tabId,
+      endId: endTab.dataset.tabId,
     };
 
     chrome.storage.local.get("arrowRelationships", (result) => {
