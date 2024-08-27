@@ -1,12 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
+  // Initial setup
   loadFlowchartState();
   displayCurrentState();
-  loadArrowRelationships(); // Load arrow relationships
+  loadArrowRelationships();
 
+  // Chrome tabs query and grouping by windowId
   chrome.tabs.query({}, (tabs) => {
     const windows = {};
 
-    // Group tabs by windowId
     tabs.forEach((tab) => {
       if (!windows[tab.windowId]) {
         windows[tab.windowId] = [];
@@ -18,7 +19,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const windowContainer = document.createElement("div");
       windowContainer.className = "window-container";
 
-      // Load saved name from storage
       chrome.storage.local.get(`workspace_${windowId}`, (result) => {
         const savedName =
           result[`workspace_${windowId}`] || `Workspace ${windowId}`;
@@ -32,21 +32,19 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         windowContainer.appendChild(workspaceLabel);
 
-        // Add tabs to the window container
         windows[windowId].forEach((tab) => {
           const li = document.createElement("li");
-          li.draggable = true; // Make the list item draggable
+          li.draggable = true;
           const div = document.createElement("div");
           div.className = "tab-container";
 
-          // Add event listeners for drag and drop
           li.addEventListener("dragstart", (event) => {
             event.dataTransfer.setData("text/plain", tab.id);
-            li.classList.add("dragging"); // Add a class for visual feedback
+            li.classList.add("dragging");
           });
 
           li.addEventListener("dragend", () => {
-            li.classList.remove("dragging"); // Remove visual feedback
+            li.classList.remove("dragging");
           });
 
           li.addEventListener("dragover", (event) => {
@@ -57,7 +55,6 @@ document.addEventListener("DOMContentLoaded", () => {
               draggingElement.getBoundingClientRect().top <
               currentElement.getBoundingClientRect().top;
 
-            // Insert the dragging element before or after the current element
             if (isAbove) {
               currentElement.parentNode.insertBefore(
                 draggingElement,
@@ -78,12 +75,11 @@ document.addEventListener("DOMContentLoaded", () => {
               `li[data-tab-id="${draggedTabId}"]`
             );
             if (draggedElement) {
-              // Save the new order
               saveTabOrder();
             }
           });
 
-          li.dataset.tabId = tab.id; // Set a data attribute for the tab ID
+          li.dataset.tabId = tab.id;
 
           const img = document.createElement("img");
           img.src = tab.favIconUrl;
@@ -111,13 +107,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // Save and load tab order
   function saveTabOrder() {
     const tabOrder = [];
     document.querySelectorAll("li[data-tab-id]").forEach((li) => {
       tabOrder.push(li.dataset.tabId);
     });
 
-    // Move tabs in the new order
     tabOrder.forEach((tabId, index) => {
       chrome.tabs.move(parseInt(tabId), { index });
     });
@@ -138,8 +134,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  loadTabOrder(); // Load the tab order when the page loads
+  loadTabOrder();
 
+  // Flowchart state management
   function saveFlowchartState() {
     const flowchartElements = Array.from(
       document.querySelectorAll(".flowchart-tab")
@@ -165,7 +162,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const flowchartArea = document.getElementById("flowchartArea");
         const toolSelector = document.getElementById("toolSelector");
 
-        // Clear existing flowchart elements while preserving the tool selector
         while (flowchartArea.firstChild) {
           if (flowchartArea.firstChild !== toolSelector) {
             flowchartArea.removeChild(flowchartArea.firstChild);
@@ -181,7 +177,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     );
   }
-  // Handle drag and drop into the flowchart area
+
+  // Drag and drop within flowchart area
   const flowchartArea = document.getElementById("flowchartArea");
 
   flowchartArea.addEventListener("dragover", (event) => {
@@ -196,7 +193,6 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
     if (existingFlowchartTab) {
-      // Move the existing flowchart tab
       existingFlowchartTab.style.left = `${
         event.clientX - flowchartArea.offsetLeft
       }px`;
@@ -204,14 +200,13 @@ document.addEventListener("DOMContentLoaded", () => {
         event.clientY - flowchartArea.offsetTop
       }px`;
     } else {
-      // Create a new flowchart tab
       const draggedElement = document.querySelector(
         `li[data-tab-id="${draggedTabId}"]`
       );
       if (draggedElement) {
         const flowchartTab = document.createElement("div");
         flowchartTab.className = "flowchart-tab";
-        flowchartTab.dataset.tabId = draggedTabId; // Set a data attribute for the tab ID
+        flowchartTab.dataset.tabId = draggedTabId;
 
         const img = document.createElement("img");
         img.src = draggedElement.querySelector("img").src;
@@ -226,7 +221,6 @@ document.addEventListener("DOMContentLoaded", () => {
         flowchartTab.appendChild(img);
         flowchartTab.appendChild(text);
 
-        // Create the drag handle
         const handle = document.createElement("div");
         handle.className = "drag-handle";
         flowchartTab.appendChild(handle);
@@ -236,7 +230,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }px`;
         flowchartTab.style.top = `${event.clientY - flowchartArea.offsetTop}px`;
 
-        // Make the flowchart tab draggable within the flowchart area
         handle.draggable = true;
         handle.addEventListener("dragstart", (event) => {
           const rect = flowchartTab.getBoundingClientRect();
@@ -255,7 +248,6 @@ document.addEventListener("DOMContentLoaded", () => {
           flowchartTab.classList.remove("dragging");
         });
 
-        // Make the flowchart tab clickable to shift focus
         flowchartTab.addEventListener("click", (event) => {
           event.preventDefault();
           chrome.tabs.update(parseInt(flowchartTab.dataset.tabId), {
@@ -279,6 +271,7 @@ document.addEventListener("DOMContentLoaded", () => {
       highlightSelectedTool(selectedTool);
     }
   });
+
   function highlightSelectedTool(selectedTool) {
     const toolButtons = toolSelector.querySelectorAll("button");
     toolButtons.forEach((button) => {
@@ -289,10 +282,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
   flowchartArea.addEventListener("click", (event) => {
     if (!selectedTool || selectedTool === "move") return;
 
-    // Check if the click is on the toolSelector
     if (event.target.closest("#toolSelector")) return;
 
     if (
@@ -302,7 +295,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Only create new elements if the tool is not "relationship"
     if (selectedTool !== "relationship") {
       const element = document.createElement("div");
       element.className = "flowchart-tab";
@@ -339,12 +331,10 @@ document.addEventListener("DOMContentLoaded", () => {
           break;
       }
 
-      // Create the drag handle
       const handle = document.createElement("div");
       handle.className = "drag-handle";
       element.appendChild(handle);
 
-      // Make the handle draggable
       handle.draggable = true;
       handle.addEventListener("dragstart", (event) => {
         const rect = element.getBoundingClientRect();
@@ -366,20 +356,18 @@ document.addEventListener("DOMContentLoaded", () => {
       flowchartArea.appendChild(element);
       saveFlowchartState();
     } else if (selectedTool === "relationship") {
-      // Handle relationship tool logic here
       const handle = event.target.closest(".drag-handle");
       if (handle) {
         if (!firstHandle) {
           firstHandle = handle;
         } else {
           createArrow(firstHandle, handle);
-          firstHandle = null; // Reset firstHandle after creating the arrow
+          firstHandle = null;
         }
       }
     }
   });
 
-  // Allow moving of created elements
   flowchartArea.addEventListener("dragover", (event) => {
     event.preventDefault();
   });
@@ -402,7 +390,7 @@ document.addEventListener("DOMContentLoaded", () => {
     saveFlowchartState();
   });
 
-  // Add event listeners for the new buttons
+  // State management buttons
   const saveStateButton = document.getElementById("saveState");
   const loadStateButton = document.getElementById("loadState");
   const clearBoardButton = document.getElementById("clearBoard");
@@ -526,7 +514,6 @@ document.addEventListener("DOMContentLoaded", () => {
     element.style.width = item.width || "auto";
     element.style.height = item.height || "auto";
 
-    // Create the delete button
     const deleteButton = document.createElement("button");
     deleteButton.className = "delete-button";
     deleteButton.textContent = "X";
@@ -537,7 +524,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     element.appendChild(deleteButton);
 
-    // Make the element draggable
     element.draggable = true;
     element.addEventListener("dragstart", (event) => {
       const rect = element.getBoundingClientRect();
@@ -556,7 +542,6 @@ document.addEventListener("DOMContentLoaded", () => {
       element.classList.remove("dragging");
     });
 
-    // Add click event listener for the tab
     const tabLink = element.querySelector("span");
     if (tabLink) {
       tabLink.addEventListener("click", (event) => {
@@ -565,7 +550,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // Add this new code for text and header elements
     if (item.type === "text" || item.type === "header") {
       element.addEventListener("input", () => {
         element.style.width = "auto";
@@ -662,7 +646,6 @@ document.addEventListener("DOMContentLoaded", () => {
     svg.appendChild(line);
     flowchartArea.appendChild(svg);
 
-    // Save the arrow relationship
     saveArrowRelationship(startTab, endTab);
   }
 
