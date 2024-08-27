@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   loadFlowchartState();
   displayCurrentState();
+  loadArrowRelationships(); // Load arrow relationships
 
   chrome.tabs.query({}, (tabs) => {
     const windows = {};
@@ -614,5 +615,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
     svg.appendChild(line);
     flowchartArea.appendChild(svg);
+
+    // Save the arrow relationship
+    saveArrowRelationship(startHandle, endHandle);
+  }
+
+  function saveArrowRelationship(startHandle, endHandle) {
+    const arrow = {
+      startId: startHandle.closest(".flowchart-tab").dataset.tabId,
+      endId: endHandle.closest(".flowchart-tab").dataset.tabId,
+    };
+
+    chrome.storage.local.get("arrowRelationships", (result) => {
+      const arrowRelationships = result.arrowRelationships || [];
+      arrowRelationships.push(arrow);
+      chrome.storage.local.set({ arrowRelationships });
+    });
+  }
+
+  function loadArrowRelationships() {
+    chrome.storage.local.get("arrowRelationships", (result) => {
+      const arrowRelationships = result.arrowRelationships || [];
+      arrowRelationships.forEach((arrow) => {
+        const startHandle = document.querySelector(
+          `.flowchart-tab[data-tab-id="${arrow.startId}"] .drag-handle`
+        );
+        const endHandle = document.querySelector(
+          `.flowchart-tab[data-tab-id="${arrow.endId}"] .drag-handle`
+        );
+        if (startHandle && endHandle) {
+          createArrow(startHandle, endHandle);
+        }
+      });
+    });
   }
 });
