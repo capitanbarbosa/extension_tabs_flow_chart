@@ -275,11 +275,24 @@ document.addEventListener("DOMContentLoaded", () => {
   toolSelector.addEventListener("click", (event) => {
     if (event.target.tagName === "BUTTON") {
       selectedTool = event.target.dataset.tool;
+      highlightSelectedTool(selectedTool);
     }
   });
-
+  function highlightSelectedTool(selectedTool) {
+    const toolButtons = toolSelector.querySelectorAll("button");
+    toolButtons.forEach((button) => {
+      if (button.dataset.tool === selectedTool) {
+        button.classList.add("selected-tool");
+      } else {
+        button.classList.remove("selected-tool");
+      }
+    });
+  }
   flowchartArea.addEventListener("click", (event) => {
     if (!selectedTool || selectedTool === "move") return;
+
+    // Check if the click is on the toolSelector
+    if (event.target.closest("#toolSelector")) return;
 
     if (
       event.target.closest(".flowchart-tab[contenteditable='true']") ||
