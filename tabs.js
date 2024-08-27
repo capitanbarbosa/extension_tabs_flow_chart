@@ -156,25 +156,29 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function loadFlowchartState() {
-    chrome.storage.local.get("flowchartState", (result) => {
-      const flowchartState = result.flowchartState || [];
-      const flowchartArea = document.getElementById("flowchartArea");
-      const toolSelector = document.getElementById("toolSelector");
+    chrome.storage.local.get(
+      ["currentFlowchartState", "flowchartState"],
+      (result) => {
+        const flowchartState =
+          result.currentFlowchartState || result.flowchartState || [];
+        const flowchartArea = document.getElementById("flowchartArea");
+        const toolSelector = document.getElementById("toolSelector");
 
-      // Clear existing flowchart elements while preserving the tool selector
-      while (flowchartArea.firstChild) {
-        if (flowchartArea.firstChild !== toolSelector) {
-          flowchartArea.removeChild(flowchartArea.firstChild);
-        } else {
-          break;
+        // Clear existing flowchart elements while preserving the tool selector
+        while (flowchartArea.firstChild) {
+          if (flowchartArea.firstChild !== toolSelector) {
+            flowchartArea.removeChild(flowchartArea.firstChild);
+          } else {
+            break;
+          }
         }
-      }
 
-      flowchartState.forEach((item) => {
-        const element = createFlowchartElement(item);
-        flowchartArea.appendChild(element);
-      });
-    });
+        flowchartState.forEach((item) => {
+          const element = createFlowchartElement(item);
+          flowchartArea.appendChild(element);
+        });
+      }
+    );
   }
   // Handle drag and drop into the flowchart area
   const flowchartArea = document.getElementById("flowchartArea");
@@ -393,9 +397,12 @@ document.addEventListener("DOMContentLoaded", () => {
           chrome.storage.local.get("savedStates", (result) => {
             const savedStates = result.savedStates || {};
             savedStates[currentState] = flowchartState;
-            chrome.storage.local.set({ savedStates }, () => {
-              alert("State saved successfully!");
-            });
+            chrome.storage.local.set(
+              { savedStates, currentFlowchartState: flowchartState },
+              () => {
+                alert("State saved successfully!");
+              }
+            );
           });
           return;
         }
@@ -407,9 +414,14 @@ document.addEventListener("DOMContentLoaded", () => {
           const savedStates = result.savedStates || {};
           savedStates[stateName] = flowchartState;
           chrome.storage.local.set(
-            { savedStates, currentState: stateName },
+            {
+              savedStates,
+              currentState: stateName,
+              currentFlowchartState: flowchartState,
+            },
             () => {
               alert("State saved successfully!");
+              displayCurrentState();
             }
           );
         });
@@ -507,4 +519,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
     return element;
   }
+
+  function saveCurrentState() {
+    const flowchartState = Array.from(
+      document.querySelectorAll(".flowchart-tab")
+    ).map((el) => ({
+      id: el.dataset.tabId,
+      type: el.classList.contains("flowchart-tab") ? "tab" : "element",
+      left: el.style.left,
+      top: el.style.top,
+      content: el.innerHTML,
+      width: el.style.width,
+      height: el.style.height,
+    }));
+
+    chrome.storage.local.set({ currentFlowchartState: flowchartState }, () => {
+      console.log("Current state saved");
+    });
+  }
+
+  window.addEventListener("beforeunload", saveCurrentState);
 });
