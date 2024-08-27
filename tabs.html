@@ -92,13 +92,13 @@
         background-color: #2e2e2e;
         border: 1px solid #d0d3d9;
         border-radius: 5px;
-        padding: 5px 10px 5px 20px; /* Increased left padding to accommodate the handle */
+        padding: 5px 10px 5px 20px;
         cursor: move;
-        max-width: 200px; /* Set a maximum width */
-        width: auto; /* Allow the width to adjust based on content */
-        white-space: nowrap; /* Prevent text from wrapping */
-        overflow: hidden; /* Hide overflowing text */
-        text-overflow: ellipsis; /* Add ellipsis for overflowing text */
+        max-width: none;
+        width: auto;
+        white-space: pre-wrap;
+        overflow: visible;
+        word-wrap: break-word;
       }
       .flowchart-tab h1 {
         font-size: 16px;

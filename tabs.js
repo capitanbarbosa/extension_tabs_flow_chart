@@ -312,16 +312,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
       switch (selectedTool) {
         case "text":
-          element.textContent = "-\u00A0\u00A0\u00A0\u00A0";
+          element.textContent = "Text";
           element.contentEditable = "true";
+          element.style.minWidth = "100px";
+          element.style.minHeight = "20px";
+          element.dataset.type = "text";
           break;
         case "header":
           element.innerHTML = "<h1 contenteditable='true'>Header</h1>";
+          element.style.minWidth = "100px";
+          element.style.minHeight = "30px";
+          element.dataset.type = "header";
           break;
         case "box":
           element.classList.add("box-element");
           element.style.border = "2px dashed #d0d3d9";
           element.style.backgroundColor = "transparent";
+          element.style.width = "100px";
+          element.style.height = "100px";
+          element.style.resize = "both";
+          element.style.overflow = "auto";
           break;
         case "arrow":
           element.innerHTML = "→";
@@ -513,8 +523,8 @@ document.addEventListener("DOMContentLoaded", () => {
     element.style.left = item.left;
     element.style.top = item.top;
     element.innerHTML = item.content;
-    element.style.width = item.width;
-    element.style.height = item.height;
+    element.style.width = item.width || "auto";
+    element.style.height = item.height || "auto";
 
     // Create the delete button
     const deleteButton = document.createElement("button");
@@ -526,9 +536,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     element.appendChild(deleteButton);
-
-    // Log to verify the delete button is added
-    console.log("Delete button added to element:", element);
 
     // Make the element draggable
     element.draggable = true;
@@ -558,7 +565,27 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
+    // Add this new code for text and header elements
+    if (item.type === "text" || item.type === "header") {
+      element.addEventListener("input", () => {
+        element.style.width = "auto";
+        element.style.height = "auto";
+        const lines = element.innerText.split("\n");
+        const maxWidth = Math.max(
+          ...lines.map((line) => measureTextWidth(line, element))
+        );
+        element.style.width = `${maxWidth + 20}px`;
+      });
+    }
+
     return element;
+  }
+
+  function measureTextWidth(text, element) {
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    context.font = getComputedStyle(element).font;
+    return context.measureText(text).width;
   }
 
   function saveCurrentState() {
