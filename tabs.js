@@ -502,6 +502,20 @@ document.addEventListener("DOMContentLoaded", () => {
     element.style.width = item.width;
     element.style.height = item.height;
 
+    // Create the delete button
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "delete-button";
+    deleteButton.textContent = "X";
+    deleteButton.addEventListener("click", () => {
+      element.remove();
+      saveFlowchartState();
+    });
+
+    element.appendChild(deleteButton);
+
+    // Log to verify the delete button is added
+    console.log("Delete button added to element:", element);
+
     // Make the element draggable
     element.draggable = true;
     element.addEventListener("dragstart", (event) => {

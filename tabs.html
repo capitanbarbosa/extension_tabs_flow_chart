@@ -94,7 +94,26 @@
         border-radius: 5px;
         background-color: #2e2e2e;
         cursor: move;
+        /* Add this line to position the delete button */
+        overflow: visible;
       }
+      .delete-button {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        background-color: red;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: none;
+        cursor: pointer;
+      }
+      .flowchart-tab:hover .delete-button {
+        display: block;
+      }
+
       /* Add this CSS for the handle */
       .drag-handle {
         width: 10px;
