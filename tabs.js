@@ -309,7 +309,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     switch (selectedTool) {
       case "text":
-        element.textContent = "Text";
+        element.textContent = "-\u00A0\u00A0\u00A0\u00A0";
         element.contentEditable = "true";
         break;
       case "header":
