@@ -1,9 +1,48 @@
+import { STORAGE_KEYS } from "./tabs/constants.js";
+import {
+  createFlowchartElement,
+  displayCurrentState,
+  clearBoard,
+} from "./tabs/utils.js";
+import { saveTabOrder, loadTabOrder } from "./tabs/tabOrder.js";
+import {
+  saveFlowchartState,
+  loadFlowchartState,
+  saveState,
+  loadState,
+  saveCurrentState,
+} from "./tabs/flowchartState.js";
+import { loadArrowRelationships } from "./tabs/arrowRelationships.js";
+import {
+  setupEventListeners,
+  setupWindowContainerEventListeners,
+} from "./tabs/eventHandlers.js";
+
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("DOM content loaded");
   loadFlowchartState();
+  console.log("Flowchart state loaded");
   displayCurrentState();
-  loadArrowRelationships(); // Load arrow relationships
+  console.log("Current state displayed");
+  loadArrowRelationships();
+  console.log("Arrow relationships loaded");
+
+  const flowchartArea = document.getElementById("flowchartArea");
+  const toolSelector = document.getElementById("toolSelector");
+
+  console.log("Flowchart area:", flowchartArea);
+  console.log("Tool selector:", toolSelector);
+
+  setupEventListeners(flowchartArea, toolSelector);
+  console.log("Event listeners set up");
 
   chrome.tabs.query({}, (tabs) => {
+    const tabList = document.getElementById("tabList");
+    if (!tabList) {
+      console.error("tabList element not found");
+      return;
+    }
+    console.log("Tabs queried:", tabs);
     const windows = {};
 
     // Group tabs by windowId
@@ -18,389 +57,43 @@ document.addEventListener("DOMContentLoaded", () => {
       const windowContainer = document.createElement("div");
       windowContainer.className = "window-container";
 
-      // Load saved name from storage
-      chrome.storage.local.get(`workspace_${windowId}`, (result) => {
-        const savedName =
-          result[`workspace_${windowId}`] || `Workspace ${windowId}`;
-        const workspaceLabel = document.createElement("input");
-        workspaceLabel.type = "text";
-        workspaceLabel.value = savedName;
-        workspaceLabel.className = "workspace-label";
-        workspaceLabel.addEventListener("blur", () => {
-          const newName = workspaceLabel.value;
-          chrome.storage.local.set({ [`workspace_${windowId}`]: newName });
-        });
-        windowContainer.appendChild(workspaceLabel);
+      setupWindowContainerEventListeners(windowContainer, windowId);
 
-        // Add tabs to the window container
-        windows[windowId].forEach((tab) => {
-          const li = document.createElement("li");
-          li.draggable = true; // Make the list item draggable
-          const div = document.createElement("div");
-          div.className = "tab-container";
+      // Add tabs to the window container
+      windows[windowId].forEach((tab) => {
+        const li = document.createElement("li");
+        li.draggable = true;
+        const div = document.createElement("div");
+        div.className = "tab-container";
 
-          // Add event listeners for drag and drop
-          li.addEventListener("dragstart", (event) => {
-            event.dataTransfer.setData("text/plain", tab.id);
-            li.classList.add("dragging"); // Add a class for visual feedback
-          });
-
-          li.addEventListener("dragend", () => {
-            li.classList.remove("dragging"); // Remove visual feedback
-          });
-
-          li.addEventListener("dragover", (event) => {
-            event.preventDefault();
-            const draggingElement = document.querySelector(".dragging");
-            const currentElement = li;
-            const isAbove =
-              draggingElement.getBoundingClientRect().top <
-              currentElement.getBoundingClientRect().top;
-
-            // Insert the dragging element before or after the current element
-            if (isAbove) {
-              currentElement.parentNode.insertBefore(
-                draggingElement,
-                currentElement
-              );
-            } else {
-              currentElement.parentNode.insertBefore(
-                draggingElement,
-                currentElement.nextSibling
-              );
-            }
-          });
-
-          li.addEventListener("drop", (event) => {
-            event.preventDefault();
-            const draggedTabId = event.dataTransfer.getData("text/plain");
-            const draggedElement = document.querySelector(
-              `li[data-tab-id="${draggedTabId}"]`
-            );
-            if (draggedElement) {
-              // Save the new order
-              saveTabOrder();
-            }
-          });
-
-          li.dataset.tabId = tab.id; // Set a data attribute for the tab ID
-
-          const img = document.createElement("img");
-          img.src = tab.favIconUrl;
-          img.alt = "Tab Icon";
-          img.style.width = "16px";
-          img.style.height = "16px";
-          img.style.marginRight = "8px";
-
-          const a = document.createElement("a");
-          a.href = "#";
-          a.textContent = tab.title;
-          a.addEventListener("click", (event) => {
-            event.preventDefault();
-            chrome.tabs.update(tab.id, { active: true });
-          });
-
-          div.appendChild(img);
-          div.appendChild(a);
-          li.appendChild(div);
-          windowContainer.appendChild(li);
-        });
-
-        tabList.appendChild(windowContainer);
-      });
-    });
-  });
-
-  function saveTabOrder() {
-    const tabOrder = [];
-    document.querySelectorAll("li[data-tab-id]").forEach((li) => {
-      tabOrder.push(li.dataset.tabId);
-    });
-
-    // Move tabs in the new order
-    tabOrder.forEach((tabId, index) => {
-      chrome.tabs.move(parseInt(tabId), { index });
-    });
-
-    chrome.storage.local.set({ tabOrder });
-  }
-
-  function loadTabOrder() {
-    chrome.storage.local.get("tabOrder", (result) => {
-      const tabOrder = result.tabOrder || [];
-      const tabList = document.getElementById("tabList");
-      tabOrder.forEach((tabId) => {
-        const li = document.querySelector(`li[data-tab-id="${tabId}"]`);
-        if (li) {
-          tabList.appendChild(li);
-        }
-      });
-    });
-  }
-
-  loadTabOrder(); // Load the tab order when the page loads
-
-  function saveFlowchartState() {
-    const flowchartElements = Array.from(
-      document.querySelectorAll(".flowchart-tab")
-    ).map((el) => ({
-      id: el.dataset.tabId,
-      type: el.classList.contains("flowchart-tab") ? "tab" : "element",
-      left: el.style.left,
-      top: el.style.top,
-      content: el.innerHTML,
-      width: el.style.width,
-      height: el.style.height,
-    }));
-
-    chrome.storage.local.set({ flowchartState: flowchartElements });
-  }
-
-  function loadFlowchartState() {
-    chrome.storage.local.get(
-      ["currentFlowchartState", "flowchartState"],
-      (result) => {
-        const flowchartState =
-          result.currentFlowchartState || result.flowchartState || [];
-        const flowchartArea = document.getElementById("flowchartArea");
-        const toolSelector = document.getElementById("toolSelector");
-
-        // Clear existing flowchart elements while preserving the tool selector
-        while (flowchartArea.firstChild) {
-          if (flowchartArea.firstChild !== toolSelector) {
-            flowchartArea.removeChild(flowchartArea.firstChild);
-          } else {
-            break;
-          }
-        }
-
-        flowchartState.forEach((item) => {
-          const element = createFlowchartElement(item);
-          flowchartArea.appendChild(element);
-        });
-      }
-    );
-  }
-  // Handle drag and drop into the flowchart area
-  const flowchartArea = document.getElementById("flowchartArea");
-
-  flowchartArea.addEventListener("dragover", (event) => {
-    event.preventDefault();
-  });
-
-  flowchartArea.addEventListener("drop", (event) => {
-    event.preventDefault();
-    const draggedTabId = event.dataTransfer.getData("text/plain");
-    const existingFlowchartTab = document.querySelector(
-      `.flowchart-tab[data-tab-id="${draggedTabId}"]`
-    );
-
-    if (existingFlowchartTab) {
-      // Move the existing flowchart tab
-      existingFlowchartTab.style.left = `${
-        event.clientX - flowchartArea.offsetLeft
-      }px`;
-      existingFlowchartTab.style.top = `${
-        event.clientY - flowchartArea.offsetTop
-      }px`;
-    } else {
-      // Create a new flowchart tab
-      const draggedElement = document.querySelector(
-        `li[data-tab-id="${draggedTabId}"]`
-      );
-      if (draggedElement) {
-        const flowchartTab = document.createElement("div");
-        flowchartTab.className = "flowchart-tab";
-        flowchartTab.dataset.tabId = draggedTabId; // Set a data attribute for the tab ID
+        li.dataset.tabId = tab.id;
 
         const img = document.createElement("img");
-        img.src = draggedElement.querySelector("img").src;
+        img.src = tab.favIconUrl;
         img.alt = "Tab Icon";
         img.style.width = "16px";
         img.style.height = "16px";
         img.style.marginRight = "8px";
 
-        const text = document.createElement("span");
-        text.textContent = draggedElement.querySelector("a").textContent;
-
-        flowchartTab.appendChild(img);
-        flowchartTab.appendChild(text);
-
-        // Create the drag handle
-        const handle = document.createElement("div");
-        handle.className = "drag-handle";
-        flowchartTab.appendChild(handle);
-
-        flowchartTab.style.left = `${
-          event.clientX - flowchartArea.offsetLeft
-        }px`;
-        flowchartTab.style.top = `${event.clientY - flowchartArea.offsetTop}px`;
-
-        // Make the flowchart tab draggable within the flowchart area
-        handle.draggable = true;
-        handle.addEventListener("dragstart", (event) => {
-          const rect = flowchartTab.getBoundingClientRect();
-          event.dataTransfer.setData(
-            "text/plain",
-            JSON.stringify({
-              id: flowchartTab.dataset.tabId,
-              offsetX: event.clientX - rect.left,
-              offsetY: event.clientY - rect.top,
-            })
-          );
-          flowchartTab.classList.add("dragging");
-        });
-
-        handle.addEventListener("dragend", () => {
-          flowchartTab.classList.remove("dragging");
-        });
-
-        // Make the flowchart tab clickable to shift focus
-        flowchartTab.addEventListener("click", (event) => {
+        const a = document.createElement("a");
+        a.href = "#";
+        a.textContent = tab.title;
+        a.addEventListener("click", (event) => {
           event.preventDefault();
-          chrome.tabs.update(parseInt(flowchartTab.dataset.tabId), {
-            active: true,
-          });
+          chrome.tabs.update(tab.id, { active: true });
         });
 
-        flowchartArea.appendChild(flowchartTab);
-      }
-    }
-    saveFlowchartState();
-  });
+        div.appendChild(img);
+        div.appendChild(a);
+        li.appendChild(div);
+        windowContainer.appendChild(li);
+      });
 
-  // Tool selector functionality
-  const toolSelector = document.getElementById("toolSelector");
-  let selectedTool = null;
-
-  toolSelector.addEventListener("click", (event) => {
-    if (event.target.tagName === "BUTTON") {
-      selectedTool = event.target.dataset.tool;
-      highlightSelectedTool(selectedTool);
-    }
-  });
-  function highlightSelectedTool(selectedTool) {
-    const toolButtons = toolSelector.querySelectorAll("button");
-    toolButtons.forEach((button) => {
-      if (button.dataset.tool === selectedTool) {
-        button.classList.add("selected-tool");
-      } else {
-        button.classList.remove("selected-tool");
-      }
+      tabList.appendChild(windowContainer);
     });
-  }
-  flowchartArea.addEventListener("click", (event) => {
-    if (!selectedTool || selectedTool === "move") return;
-
-    // Check if the click is on the toolSelector
-    if (event.target.closest("#toolSelector")) return;
-
-    if (
-      event.target.closest(".flowchart-tab[contenteditable='true']") ||
-      event.target.closest(".flowchart-tab h1[contenteditable='true']")
-    ) {
-      return;
-    }
-
-    // Only create new elements if the tool is not "relationship"
-    if (selectedTool !== "relationship") {
-      const element = document.createElement("div");
-      element.className = "flowchart-tab";
-      element.dataset.tabId = Date.now().toString();
-      element.style.left = `${event.clientX - flowchartArea.offsetLeft}px`;
-      element.style.top = `${event.clientY - flowchartArea.offsetTop}px`;
-
-      switch (selectedTool) {
-        case "text":
-          element.textContent = "Text";
-          element.contentEditable = "true";
-          element.style.minWidth = "100px";
-          element.style.minHeight = "20px";
-          element.dataset.type = "text";
-          break;
-        case "header":
-          element.innerHTML = "<h1 contenteditable='true'>Header</h1>";
-          element.style.minWidth = "100px";
-          element.style.minHeight = "30px";
-          element.dataset.type = "header";
-          break;
-        case "box":
-          element.classList.add("box-element");
-          element.style.border = "2px dashed #d0d3d9";
-          element.style.backgroundColor = "transparent";
-          element.style.width = "100px";
-          element.style.height = "100px";
-          element.style.resize = "both";
-          element.style.overflow = "auto";
-          break;
-        case "arrow":
-          element.innerHTML = "→";
-          element.style.fontSize = "24px";
-          break;
-      }
-
-      // Create the drag handle
-      const handle = document.createElement("div");
-      handle.className = "drag-handle";
-      element.appendChild(handle);
-
-      // Make the handle draggable
-      handle.draggable = true;
-      handle.addEventListener("dragstart", (event) => {
-        const rect = element.getBoundingClientRect();
-        event.dataTransfer.setData(
-          "text/plain",
-          JSON.stringify({
-            id: element.dataset.tabId || "",
-            offsetX: event.clientX - rect.left,
-            offsetY: event.clientY - rect.top,
-          })
-        );
-        element.classList.add("dragging");
-      });
-
-      handle.addEventListener("dragend", () => {
-        element.classList.remove("dragging");
-      });
-
-      flowchartArea.appendChild(element);
-      saveFlowchartState();
-    } else if (selectedTool === "relationship") {
-      // Handle relationship tool logic here
-      const handle = event.target.closest(".drag-handle");
-      if (handle) {
-        if (!firstHandle) {
-          firstHandle = handle;
-        } else {
-          createArrow(firstHandle, handle);
-          firstHandle = null; // Reset firstHandle after creating the arrow
-        }
-      }
-    }
   });
 
-  // Allow moving of created elements
-  flowchartArea.addEventListener("dragover", (event) => {
-    event.preventDefault();
-  });
-
-  flowchartArea.addEventListener("drop", (event) => {
-    event.preventDefault();
-    const data = JSON.parse(event.dataTransfer.getData("text/plain"));
-    const draggingElement = document.querySelector(
-      `.flowchart-tab[data-tab-id="${data.id}"]`
-    );
-    if (draggingElement) {
-      draggingElement.style.left = `${
-        event.clientX - data.offsetX - flowchartArea.offsetLeft
-      }px`;
-      draggingElement.style.top = `${
-        event.clientY - data.offsetY - flowchartArea.offsetTop
-      }px`;
-      draggingElement.classList.remove("dragging");
-    }
-    saveFlowchartState();
-  });
+  loadTabOrder();
 
   // Add event listeners for the new buttons
   const saveStateButton = document.getElementById("saveState");
@@ -411,288 +104,5 @@ document.addEventListener("DOMContentLoaded", () => {
   loadStateButton.addEventListener("click", loadState);
   clearBoardButton.addEventListener("click", clearBoard);
 
-  function saveState() {
-    const flowchartState = Array.from(
-      document.querySelectorAll(".flowchart-tab")
-    ).map((el) => ({
-      id: el.dataset.tabId,
-      type: el.classList.contains("flowchart-tab") ? "tab" : "element",
-      left: el.style.left,
-      top: el.style.top,
-      content: el.innerHTML,
-      width: el.style.width,
-      height: el.style.height,
-    }));
-
-    chrome.storage.local.get("currentState", (result) => {
-      const currentState = result.currentState;
-      if (currentState) {
-        const overwrite = confirm(
-          `Do you want to overwrite the current state "${currentState}"?`
-        );
-        if (overwrite) {
-          chrome.storage.local.get("savedStates", (result) => {
-            const savedStates = result.savedStates || {};
-            savedStates[currentState] = flowchartState;
-            chrome.storage.local.set(
-              { savedStates, currentFlowchartState: flowchartState },
-              () => {
-                alert("State saved successfully!");
-              }
-            );
-          });
-          return;
-        }
-      }
-
-      const stateName = prompt("Enter a name for this state:");
-      if (stateName) {
-        chrome.storage.local.get("savedStates", (result) => {
-          const savedStates = result.savedStates || {};
-          savedStates[stateName] = flowchartState;
-          chrome.storage.local.set(
-            {
-              savedStates,
-              currentState: stateName,
-              currentFlowchartState: flowchartState,
-            },
-            () => {
-              alert("State saved successfully!");
-              displayCurrentState();
-            }
-          );
-        });
-      }
-    });
-  }
-
-  function loadState() {
-    chrome.storage.local.get("savedStates", (result) => {
-      const savedStates = result.savedStates || {};
-      const stateNames = Object.keys(savedStates);
-
-      if (stateNames.length === 0) {
-        alert("No saved states found.");
-        return;
-      }
-
-      const stateName = prompt(
-        "Enter the name of the state to load:\n\nAvailable states:\n" +
-          stateNames.join("\n")
-      );
-      if (stateName && savedStates[stateName]) {
-        clearBoard();
-        const flowchartArea = document.getElementById("flowchartArea");
-        savedStates[stateName].forEach((item) => {
-          const element = createFlowchartElement(item);
-          flowchartArea.appendChild(element);
-        });
-        chrome.storage.local.set({ currentState: stateName }, () => {
-          alert("State loaded successfully!");
-        });
-      } else if (stateName) {
-        alert("State not found.");
-      }
-    });
-  }
-
-  function displayCurrentState() {
-    chrome.storage.local.get("currentState", (result) => {
-      const currentState = result.currentState;
-      const stateDisplay = document.getElementById("currentStateDisplay");
-      if (currentState) {
-        stateDisplay.textContent = `Current State: ${currentState}`;
-      } else {
-        stateDisplay.textContent = "No state loaded";
-      }
-    });
-  }
-
-  function clearBoard() {
-    const flowchartArea = document.getElementById("flowchartArea");
-    const flowchartElements = flowchartArea.querySelectorAll(".flowchart-tab");
-    flowchartElements.forEach((element) => {
-      flowchartArea.removeChild(element);
-    });
-  }
-
-  function createFlowchartElement(item) {
-    const element = document.createElement("div");
-    element.className = "flowchart-tab";
-    element.dataset.tabId = item.id;
-    element.style.left = item.left;
-    element.style.top = item.top;
-    element.innerHTML = item.content;
-    element.style.width = item.width || "auto";
-    element.style.height = item.height || "auto";
-
-    // Create the delete button
-    const deleteButton = document.createElement("button");
-    deleteButton.className = "delete-button";
-    deleteButton.textContent = "X";
-    deleteButton.addEventListener("click", () => {
-      element.remove();
-      saveFlowchartState();
-    });
-
-    element.appendChild(deleteButton);
-
-    // Make the element draggable
-    element.draggable = true;
-    element.addEventListener("dragstart", (event) => {
-      const rect = element.getBoundingClientRect();
-      event.dataTransfer.setData(
-        "text/plain",
-        JSON.stringify({
-          id: element.dataset.tabId,
-          offsetX: event.clientX - rect.left,
-          offsetY: event.clientY - rect.top,
-        })
-      );
-      element.classList.add("dragging");
-    });
-
-    element.addEventListener("dragend", () => {
-      element.classList.remove("dragging");
-    });
-
-    // Add click event listener for the tab
-    const tabLink = element.querySelector("span");
-    if (tabLink) {
-      tabLink.addEventListener("click", (event) => {
-        event.preventDefault();
-        chrome.tabs.update(parseInt(element.dataset.tabId), { active: true });
-      });
-    }
-
-    // Add this new code for text and header elements
-    if (item.type === "text" || item.type === "header") {
-      element.addEventListener("input", () => {
-        element.style.width = "auto";
-        element.style.height = "auto";
-        const lines = element.innerText.split("\n");
-        const maxWidth = Math.max(
-          ...lines.map((line) => measureTextWidth(line, element))
-        );
-        element.style.width = `${maxWidth + 20}px`;
-      });
-    }
-
-    return element;
-  }
-
-  function measureTextWidth(text, element) {
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
-    context.font = getComputedStyle(element).font;
-    return context.measureText(text).width;
-  }
-
-  function saveCurrentState() {
-    const flowchartState = Array.from(
-      document.querySelectorAll(".flowchart-tab")
-    ).map((el) => ({
-      id: el.dataset.tabId,
-      type: el.classList.contains("flowchart-tab") ? "tab" : "element",
-      left: el.style.left,
-      top: el.style.top,
-      content: el.innerHTML,
-      width: el.style.width,
-      height: el.style.height,
-    }));
-
-    chrome.storage.local.set({ currentFlowchartState: flowchartState }, () => {
-      console.log("Current state saved");
-    });
-  }
-
   window.addEventListener("beforeunload", saveCurrentState);
-
-  let firstTab = null;
-
-  flowchartArea.addEventListener("click", (event) => {
-    if (selectedTool === "relationship") {
-      event.preventDefault();
-      event.stopPropagation();
-      const clickedTab = event.target.closest(".flowchart-tab");
-      if (clickedTab) {
-        if (!firstTab) {
-          firstTab = clickedTab;
-          firstTab.classList.add("relationship-start");
-        } else if (clickedTab !== firstTab) {
-          createArrow(firstTab, clickedTab);
-          firstTab.classList.remove("relationship-start");
-          firstTab = null;
-        }
-      }
-    }
-  });
-
-  function createArrow(startTab, endTab) {
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-
-    const startHandle = startTab.querySelector(".drag-handle");
-    const endHandle = endTab.querySelector(".drag-handle");
-
-    const startRect = startHandle.getBoundingClientRect();
-    const endRect = endHandle.getBoundingClientRect();
-    const flowchartRect = flowchartArea.getBoundingClientRect();
-
-    const x1 = startRect.left + startRect.width / 2 - flowchartRect.left;
-    const y1 = startRect.top + startRect.height / 2 - flowchartRect.top;
-    const x2 = endRect.left + endRect.width / 2 - flowchartRect.left;
-    const y2 = endRect.top + endRect.height / 2 - flowchartRect.top;
-
-    svg.style.position = "absolute";
-    svg.style.left = "0";
-    svg.style.top = "0";
-    svg.style.width = "100%";
-    svg.style.height = "100%";
-    svg.style.pointerEvents = "none";
-    svg.classList.add("relationship-arrow");
-
-    line.setAttribute("x1", x1);
-    line.setAttribute("y1", y1);
-    line.setAttribute("x2", x2);
-    line.setAttribute("y2", y2);
-    line.setAttribute("stroke", "#61afef");
-    line.setAttribute("stroke-width", "2");
-
-    svg.appendChild(line);
-    flowchartArea.appendChild(svg);
-
-    // Save the arrow relationship
-    saveArrowRelationship(startTab, endTab);
-  }
-
-  function saveArrowRelationship(startTab, endTab) {
-    const arrow = {
-      startId: startTab.dataset.tabId,
-      endId: endTab.dataset.tabId,
-    };
-
-    chrome.storage.local.get("arrowRelationships", (result) => {
-      const arrowRelationships = result.arrowRelationships || [];
-      arrowRelationships.push(arrow);
-      chrome.storage.local.set({ arrowRelationships });
-    });
-  }
-
-  function loadArrowRelationships() {
-    chrome.storage.local.get("arrowRelationships", (result) => {
-      const arrowRelationships = result.arrowRelationships || [];
-      arrowRelationships.forEach((arrow) => {
-        const startTab = document.querySelector(
-          `.flowchart-tab[data-tab-id="${arrow.startId}"]`
-        );
-        const endTab = document.querySelector(
-          `.flowchart-tab[data-tab-id="${arrow.endId}"]`
-        );
-        if (startTab && endTab) {
-          createArrow(startTab, endTab);
-        }
-      });
-    });
-  }
 });
