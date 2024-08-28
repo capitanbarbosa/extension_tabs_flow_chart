@@ -170,6 +170,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const flowchartCanvas = document.getElementById("flowchartCanvas");
         const toolSelector = document.getElementById("toolSelector");
 
+        // Clear existing elements
         while (flowchartCanvas.firstChild) {
           if (flowchartCanvas.firstChild !== toolSelector) {
             flowchartCanvas.removeChild(flowchartCanvas.firstChild);
@@ -182,6 +183,8 @@ document.addEventListener("DOMContentLoaded", () => {
           const element = createFlowchartElement(item);
           flowchartCanvas.appendChild(element);
         });
+
+        console.log("Loaded flowchart state:", flowchartState); // For debugging
       }
     );
   }
@@ -539,13 +542,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const element = document.createElement("div");
     element.className = "flowchart-tab";
     element.dataset.tabId = item.id;
-    element.style.left = `${parseInt(item.left) - flowchartArea.scrollLeft}px`;
-    element.style.top = `${parseInt(item.top) - flowchartArea.scrollTop}px`;
+    element.style.left = item.left;
+    element.style.top = item.top;
     element.innerHTML = item.content;
     element.style.width = item.width || "auto";
     element.style.height = item.height || "auto";
 
-    // Ensure the box element retains its transparent background and dashed border
     if (item.type === "box") {
       element.classList.add("box-element");
     }
@@ -735,5 +737,224 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
     });
+  }
+
+  // Add these variables at the top of your file, after the existing declarations
+  let selectedElements = new Set();
+  let isSelecting = false;
+  let selectionBox = null;
+  let startX, startY;
+
+  // Modify the flowchartCanvas event listeners
+  flowchartCanvas.addEventListener("mousedown", startSelection);
+  flowchartCanvas.addEventListener("mousemove", updateSelection);
+  flowchartCanvas.addEventListener("mouseup", endSelection);
+
+  // Add these new functions
+  function startSelection(event) {
+    if (event.target === flowchartCanvas && selectedTool === "move") {
+      isSelecting = true;
+      startX = event.clientX + flowchartArea.scrollLeft;
+      startY = event.clientY + flowchartArea.scrollTop;
+
+      selectionBox = document.createElement("div");
+      selectionBox.className = "selection-box";
+      selectionBox.style.left = `${startX}px`;
+      selectionBox.style.top = `${startY}px`;
+      flowchartCanvas.appendChild(selectionBox);
+
+      // Clear previous selection if not holding Ctrl key
+      if (!event.ctrlKey) {
+        selectedElements.forEach((el) => el.classList.remove("selected"));
+        selectedElements.clear();
+      }
+    }
+  }
+
+  function updateSelection(event) {
+    if (isSelecting) {
+      const currentX = event.clientX + flowchartArea.scrollLeft;
+      const currentY = event.clientY + flowchartArea.scrollTop;
+
+      const left = Math.min(startX, currentX);
+      const top = Math.min(startY, currentY);
+      const width = Math.abs(currentX - startX);
+      const height = Math.abs(currentY - startY);
+
+      selectionBox.style.left = `${left}px`;
+      selectionBox.style.top = `${top}px`;
+      selectionBox.style.width = `${width}px`;
+      selectionBox.style.height = `${height}px`;
+    }
+  }
+
+  function endSelection(event) {
+    if (isSelecting) {
+      isSelecting = false;
+      const selectionRect = selectionBox.getBoundingClientRect();
+
+      document.querySelectorAll(".flowchart-tab").forEach((element) => {
+        const elementRect = element.getBoundingClientRect();
+        if (
+          elementRect.left < selectionRect.right &&
+          elementRect.right > selectionRect.left &&
+          elementRect.top < selectionRect.bottom &&
+          elementRect.bottom > selectionRect.top
+        ) {
+          selectedElements.add(element);
+          element.classList.add("selected");
+        }
+      });
+
+      flowchartCanvas.removeChild(selectionBox);
+      selectionBox = null;
+    }
+  }
+
+  // Modify the existing flowchartCanvas drop event listener
+  flowchartCanvas.addEventListener("drop", (event) => {
+    event.preventDefault();
+    const data = JSON.parse(event.dataTransfer.getData("text/plain"));
+
+    if (selectedElements.size > 0) {
+      const offsetX = event.clientX - data.startX;
+      const offsetY = event.clientY - data.startY;
+
+      selectedElements.forEach((element) => {
+        const newLeft = parseInt(element.style.left) + offsetX;
+        const newTop = parseInt(element.style.top) + offsetY;
+
+        element.style.left = `${newLeft}px`;
+        element.style.top = `${newTop}px`;
+        element.classList.remove("selected");
+      });
+
+      selectedElements.clear();
+    } else {
+      // ... existing single element drop logic ...
+    }
+
+    saveFlowchartState();
+  });
+
+  // Modify the createFlowchartElement function
+  function createFlowchartElement(item) {
+    const element = document.createElement("div");
+    element.className = "flowchart-tab";
+    element.dataset.tabId = item.id;
+    element.style.left = item.left;
+    element.style.top = item.top;
+    element.innerHTML = item.content;
+    element.style.width = item.width || "auto";
+    element.style.height = item.height || "auto";
+
+    if (item.type === "box") {
+      element.classList.add("box-element");
+    }
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "delete-button";
+    deleteButton.textContent = "X";
+    deleteButton.addEventListener("click", () => {
+      element.remove();
+      saveFlowchartState();
+    });
+
+    element.appendChild(deleteButton);
+
+    element.draggable = true;
+    element.addEventListener("dragstart", (event) => {
+      const rect = element.getBoundingClientRect();
+      event.dataTransfer.setData(
+        "text/plain",
+        JSON.stringify({
+          id: element.dataset.tabId,
+          offsetX: event.clientX - rect.left,
+          offsetY: event.clientY - rect.top,
+        })
+      );
+      element.classList.add("dragging");
+    });
+
+    element.addEventListener("dragend", () => {
+      element.classList.remove("dragging");
+    });
+
+    const tabLink = element.querySelector("span");
+    if (tabLink) {
+      tabLink.addEventListener("click", (event) => {
+        event.preventDefault();
+        chrome.tabs.update(parseInt(element.dataset.tabId), { active: true });
+      });
+    }
+
+    if (item.type === "text" || item.type === "header") {
+      element.addEventListener("input", () => {
+        element.style.width = "auto";
+        element.style.height = "auto";
+        const lines = element.innerText.split("\n");
+        const maxWidth = Math.max(
+          ...lines.map((line) => measureTextWidth(line, element))
+        );
+        element.style.width = `${maxWidth + 20}px`;
+      });
+    }
+
+    element.addEventListener("mousedown", (event) => {
+      if (selectedTool === "move") {
+        if (!event.ctrlKey && !selectedElements.has(element)) {
+          selectedElements.forEach((el) => el.classList.remove("selected"));
+          selectedElements.clear();
+        }
+
+        if (event.ctrlKey) {
+          if (selectedElements.has(element)) {
+            selectedElements.delete(element);
+            element.classList.remove("selected");
+          } else {
+            selectedElements.add(element);
+            element.classList.add("selected");
+          }
+        } else {
+          selectedElements.add(element);
+          element.classList.add("selected");
+        }
+
+        const rect = element.getBoundingClientRect();
+        event.dataTransfer.setData(
+          "text/plain",
+          JSON.stringify({
+            startX: event.clientX,
+            startY: event.clientY,
+            offsetX: event.clientX - rect.left,
+            offsetY: event.clientY - rect.top,
+          })
+        );
+      }
+    });
+
+    return element;
+  }
+
+  // Make sure to call this function whenever the flowchart state changes
+  function saveFlowchartState() {
+    const flowchartElements = Array.from(
+      document.querySelectorAll(".flowchart-tab")
+    ).map((el) => ({
+      id: el.dataset.tabId,
+      type: el.classList.contains("box-element") ? "box" : "element",
+      left: el.style.left,
+      top: el.style.top,
+      content: el.innerHTML,
+      width: el.style.width,
+      height: el.style.height,
+    }));
+
+    chrome.storage.local.set(
+      { currentFlowchartState: flowchartElements },
+      () => {
+        console.log("Flowchart state saved"); // For debugging
+      }
+    );
   }
 });
