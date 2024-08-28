@@ -1,10 +1,14 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // Initial setup
+  // ==========================
+  // Initial Setup
+  // ==========================
   loadFlowchartState();
   displayCurrentState();
   loadArrowRelationships();
 
-  // Chrome tabs query and grouping by windowId
+  // ==========================
+  // Chrome Tabs Query and Grouping by windowId
+  // ==========================
   chrome.tabs.query({}, (tabs) => {
     const windows = {};
 
@@ -107,7 +111,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Save and load tab order
+  // ==========================
+  // Save and Load Tab Order
+  // ==========================
   function saveTabOrder() {
     const tabOrder = [];
     document.querySelectorAll("li[data-tab-id]").forEach((li) => {
@@ -136,13 +142,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   loadTabOrder();
 
-  // Flowchart state management
+  // ==========================
+  // Flowchart State Management
+  // ==========================
   function saveFlowchartState() {
     const flowchartElements = Array.from(
       document.querySelectorAll(".flowchart-tab")
     ).map((el) => ({
       id: el.dataset.tabId,
-      type: el.classList.contains("flowchart-tab") ? "tab" : "element",
+      type: el.classList.contains("box-element") ? "box" : "element",
       left: el.style.left,
       top: el.style.top,
       content: el.innerHTML,
@@ -178,7 +186,9 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  // Drag and drop within flowchart area
+  // ==========================
+  // Drag and Drop within Flowchart Area
+  // ==========================
   const flowchartArea = document.getElementById("flowchartArea");
 
   flowchartArea.addEventListener("dragover", (event) => {
@@ -261,7 +271,9 @@ document.addEventListener("DOMContentLoaded", () => {
     saveFlowchartState();
   });
 
-  // Tool selector functionality
+  // ==========================
+  // Tool Selector Functionality
+  // ==========================
   const toolSelector = document.getElementById("toolSelector");
   let selectedTool = null;
 
@@ -390,7 +402,9 @@ document.addEventListener("DOMContentLoaded", () => {
     saveFlowchartState();
   });
 
-  // State management buttons
+  // ==========================
+  // State Management Buttons
+  // ==========================
   const saveStateButton = document.getElementById("saveState");
   const loadStateButton = document.getElementById("loadState");
   const clearBoardButton = document.getElementById("clearBoard");
@@ -504,6 +518,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ==========================
+  // Flowchart Element Creation
+  // ==========================
   function createFlowchartElement(item) {
     const element = document.createElement("div");
     element.className = "flowchart-tab";
@@ -513,6 +530,11 @@ document.addEventListener("DOMContentLoaded", () => {
     element.innerHTML = item.content;
     element.style.width = item.width || "auto";
     element.style.height = item.height || "auto";
+
+    // Ensure the box element retains its transparent background and dashed border
+    if (item.type === "box") {
+      element.classList.add("box-element");
+    }
 
     const deleteButton = document.createElement("button");
     deleteButton.className = "delete-button";
@@ -572,6 +594,9 @@ document.addEventListener("DOMContentLoaded", () => {
     return context.measureText(text).width;
   }
 
+  // ==========================
+  // Save Current State
+  // ==========================
   function saveCurrentState() {
     const flowchartState = Array.from(
       document.querySelectorAll(".flowchart-tab")
@@ -612,6 +637,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // ==========================
+  // Arrow Relationships
+  // ==========================
   function createArrow(startTab, endTab) {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
