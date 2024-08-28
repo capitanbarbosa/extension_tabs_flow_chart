@@ -151,8 +151,8 @@ document.addEventListener("DOMContentLoaded", () => {
     ).map((el) => ({
       id: el.dataset.tabId,
       type: el.classList.contains("box-element") ? "box" : "element",
-      left: el.style.left,
-      top: el.style.top,
+      left: `${parseInt(el.style.left) + flowchartArea.scrollLeft}px`,
+      top: `${parseInt(el.style.top) + flowchartArea.scrollTop}px`,
       content: el.innerHTML,
       width: el.style.width,
       height: el.style.height,
@@ -167,12 +167,12 @@ document.addEventListener("DOMContentLoaded", () => {
       (result) => {
         const flowchartState =
           result.currentFlowchartState || result.flowchartState || [];
-        const flowchartArea = document.getElementById("flowchartArea");
+        const flowchartCanvas = document.getElementById("flowchartCanvas");
         const toolSelector = document.getElementById("toolSelector");
 
-        while (flowchartArea.firstChild) {
-          if (flowchartArea.firstChild !== toolSelector) {
-            flowchartArea.removeChild(flowchartArea.firstChild);
+        while (flowchartCanvas.firstChild) {
+          if (flowchartCanvas.firstChild !== toolSelector) {
+            flowchartCanvas.removeChild(flowchartCanvas.firstChild);
           } else {
             break;
           }
@@ -180,7 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         flowchartState.forEach((item) => {
           const element = createFlowchartElement(item);
-          flowchartArea.appendChild(element);
+          flowchartCanvas.appendChild(element);
         });
       }
     );
@@ -190,12 +190,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // Drag and Drop within Flowchart Area
   // ==========================
   const flowchartArea = document.getElementById("flowchartArea");
+  const flowchartCanvas = document.getElementById("flowchartCanvas");
 
-  flowchartArea.addEventListener("dragover", (event) => {
+  flowchartCanvas.addEventListener("dragover", (event) => {
     event.preventDefault();
   });
 
-  flowchartArea.addEventListener("drop", (event) => {
+  flowchartCanvas.addEventListener("drop", (event) => {
     event.preventDefault();
     const draggedTabId = event.dataTransfer.getData("text/plain");
     const existingFlowchartTab = document.querySelector(
@@ -204,10 +205,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (existingFlowchartTab) {
       existingFlowchartTab.style.left = `${
-        event.clientX - flowchartArea.offsetLeft
+        event.clientX - flowchartArea.offsetLeft + flowchartArea.scrollLeft
       }px`;
       existingFlowchartTab.style.top = `${
-        event.clientY - flowchartArea.offsetTop
+        event.clientY - flowchartArea.offsetTop + flowchartArea.scrollTop
       }px`;
     } else {
       const draggedElement = document.querySelector(
@@ -236,9 +237,11 @@ document.addEventListener("DOMContentLoaded", () => {
         flowchartTab.appendChild(handle);
 
         flowchartTab.style.left = `${
-          event.clientX - flowchartArea.offsetLeft
+          event.clientX - flowchartArea.offsetLeft + flowchartArea.scrollLeft
         }px`;
-        flowchartTab.style.top = `${event.clientY - flowchartArea.offsetTop}px`;
+        flowchartTab.style.top = `${
+          event.clientY - flowchartArea.offsetTop + flowchartArea.scrollTop
+        }px`;
 
         handle.draggable = true;
         handle.addEventListener("dragstart", (event) => {
@@ -265,7 +268,7 @@ document.addEventListener("DOMContentLoaded", () => {
           });
         });
 
-        flowchartArea.appendChild(flowchartTab);
+        flowchartCanvas.appendChild(flowchartTab);
       }
     }
     saveFlowchartState();
@@ -295,7 +298,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  flowchartArea.addEventListener("click", (event) => {
+  flowchartCanvas.addEventListener("click", (event) => {
     if (!selectedTool || selectedTool === "move") return;
 
     if (event.target.closest("#toolSelector")) return;
@@ -311,8 +314,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const element = document.createElement("div");
       element.className = "flowchart-tab";
       element.dataset.tabId = Date.now().toString();
-      element.style.left = `${event.clientX - flowchartArea.offsetLeft}px`;
-      element.style.top = `${event.clientY - flowchartArea.offsetTop}px`;
+      element.style.left = `${
+        event.clientX - flowchartArea.offsetLeft + flowchartArea.scrollLeft
+      }px`;
+      element.style.top = `${
+        event.clientY - flowchartArea.offsetTop + flowchartArea.scrollTop
+      }px`;
 
       switch (selectedTool) {
         case "text":
@@ -365,7 +372,7 @@ document.addEventListener("DOMContentLoaded", () => {
         element.classList.remove("dragging");
       });
 
-      flowchartArea.appendChild(element);
+      flowchartCanvas.appendChild(element);
       saveFlowchartState();
     } else if (selectedTool === "relationship") {
       const handle = event.target.closest(".drag-handle");
@@ -380,11 +387,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  flowchartArea.addEventListener("dragover", (event) => {
+  flowchartCanvas.addEventListener("dragover", (event) => {
     event.preventDefault();
   });
 
-  flowchartArea.addEventListener("drop", (event) => {
+  flowchartCanvas.addEventListener("drop", (event) => {
     event.preventDefault();
     const data = JSON.parse(event.dataTransfer.getData("text/plain"));
     const draggingElement = document.querySelector(
@@ -392,10 +399,16 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     if (draggingElement) {
       draggingElement.style.left = `${
-        event.clientX - data.offsetX - flowchartArea.offsetLeft
+        event.clientX -
+        data.offsetX -
+        flowchartArea.offsetLeft +
+        flowchartArea.scrollLeft
       }px`;
       draggingElement.style.top = `${
-        event.clientY - data.offsetY - flowchartArea.offsetTop
+        event.clientY -
+        data.offsetY -
+        flowchartArea.offsetTop +
+        flowchartArea.scrollTop
       }px`;
       draggingElement.classList.remove("dragging");
     }
@@ -484,10 +497,10 @@ document.addEventListener("DOMContentLoaded", () => {
       );
       if (stateName && savedStates[stateName]) {
         clearBoard();
-        const flowchartArea = document.getElementById("flowchartArea");
+        const flowchartCanvas = document.getElementById("flowchartCanvas");
         savedStates[stateName].forEach((item) => {
           const element = createFlowchartElement(item);
-          flowchartArea.appendChild(element);
+          flowchartCanvas.appendChild(element);
         });
         chrome.storage.local.set({ currentState: stateName }, () => {
           alert("State loaded successfully!");
@@ -511,10 +524,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function clearBoard() {
-    const flowchartArea = document.getElementById("flowchartArea");
-    const flowchartElements = flowchartArea.querySelectorAll(".flowchart-tab");
+    const flowchartCanvas = document.getElementById("flowchartCanvas");
+    const flowchartElements =
+      flowchartCanvas.querySelectorAll(".flowchart-tab");
     flowchartElements.forEach((element) => {
-      flowchartArea.removeChild(element);
+      flowchartCanvas.removeChild(element);
     });
   }
 
@@ -525,8 +539,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const element = document.createElement("div");
     element.className = "flowchart-tab";
     element.dataset.tabId = item.id;
-    element.style.left = item.left;
-    element.style.top = item.top;
+    element.style.left = `${parseInt(item.left) - flowchartArea.scrollLeft}px`;
+    element.style.top = `${parseInt(item.top) - flowchartArea.scrollTop}px`;
     element.innerHTML = item.content;
     element.style.width = item.width || "auto";
     element.style.height = item.height || "auto";
@@ -619,7 +633,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let firstTab = null;
 
-  flowchartArea.addEventListener("click", (event) => {
+  flowchartCanvas.addEventListener("click", (event) => {
     if (selectedTool === "relationship") {
       event.preventDefault();
       event.stopPropagation();
@@ -651,10 +665,26 @@ document.addEventListener("DOMContentLoaded", () => {
     const endRect = endHandle.getBoundingClientRect();
     const flowchartRect = flowchartArea.getBoundingClientRect();
 
-    const x1 = startRect.left + startRect.width / 2 - flowchartRect.left;
-    const y1 = startRect.top + startRect.height / 2 - flowchartRect.top;
-    const x2 = endRect.left + endRect.width / 2 - flowchartRect.left;
-    const y2 = endRect.top + endRect.height / 2 - flowchartRect.top;
+    const x1 =
+      startRect.left +
+      startRect.width / 2 -
+      flowchartRect.left +
+      flowchartArea.scrollLeft;
+    const y1 =
+      startRect.top +
+      startRect.height / 2 -
+      flowchartRect.top +
+      flowchartArea.scrollTop;
+    const x2 =
+      endRect.left +
+      endRect.width / 2 -
+      flowchartRect.left +
+      flowchartArea.scrollLeft;
+    const y2 =
+      endRect.top +
+      endRect.height / 2 -
+      flowchartRect.top +
+      flowchartArea.scrollTop;
 
     svg.style.position = "absolute";
     svg.style.left = "0";
@@ -672,7 +702,7 @@ document.addEventListener("DOMContentLoaded", () => {
     line.setAttribute("stroke-width", "2");
 
     svg.appendChild(line);
-    flowchartArea.appendChild(svg);
+    flowchartCanvas.appendChild(svg);
 
     saveArrowRelationship(startTab, endTab);
   }
