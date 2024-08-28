@@ -750,12 +750,12 @@ document.addEventListener("DOMContentLoaded", () => {
   flowchartCanvas.addEventListener("mousemove", updateSelection);
   flowchartCanvas.addEventListener("mouseup", endSelection);
 
-  // Add these new functions
   function startSelection(event) {
     if (event.target === flowchartCanvas && selectedTool === "move") {
       isSelecting = true;
-      startX = event.clientX + flowchartArea.scrollLeft;
-      startY = event.clientY + flowchartArea.scrollTop;
+      const flowchartRect = flowchartArea.getBoundingClientRect();
+      startX = event.clientX - flowchartRect.left + flowchartArea.scrollLeft;
+      startY = event.clientY - flowchartRect.top + flowchartArea.scrollTop;
 
       selectionBox = document.createElement("div");
       selectionBox.className = "selection-box";
@@ -773,8 +773,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function updateSelection(event) {
     if (isSelecting) {
-      const currentX = event.clientX + flowchartArea.scrollLeft;
-      const currentY = event.clientY + flowchartArea.scrollTop;
+      const flowchartRect = flowchartArea.getBoundingClientRect();
+      const currentX =
+        event.clientX - flowchartRect.left + flowchartArea.scrollLeft;
+      const currentY =
+        event.clientY - flowchartRect.top + flowchartArea.scrollTop;
 
       const left = Math.min(startX, currentX);
       const top = Math.min(startY, currentY);
