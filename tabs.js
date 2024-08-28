@@ -150,7 +150,9 @@ document.addEventListener("DOMContentLoaded", () => {
       document.querySelectorAll(".flowchart-tab")
     ).map((el) => ({
       id: el.dataset.tabId,
-      type: el.classList.contains("box-element") ? "box" : "element",
+      type:
+        el.dataset.type ||
+        (el.classList.contains("box-element") ? "box" : "element"),
       left: `${parseInt(el.style.left) + flowchartArea.scrollLeft}px`,
       top: `${parseInt(el.style.top) + flowchartArea.scrollTop}px`,
       content: el.innerHTML,
@@ -550,6 +552,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (item.type === "box") {
       element.classList.add("box-element");
+    } else if (item.type === "text") {
+      element.contentEditable = "true";
+      element.dataset.type = "text";
+    } else if (item.type === "header") {
+      const header = element.querySelector("h1");
+      if (header) {
+        header.contentEditable = "true";
+      }
+      element.dataset.type = "header";
     }
 
     const deleteButton = document.createElement("button");
@@ -599,6 +610,39 @@ document.addEventListener("DOMContentLoaded", () => {
         element.style.width = `${maxWidth + 20}px`;
       });
     }
+
+    element.addEventListener("mousedown", (event) => {
+      if (selectedTool === "move") {
+        if (!event.ctrlKey && !selectedElements.has(element)) {
+          selectedElements.forEach((el) => el.classList.remove("selected"));
+          selectedElements.clear();
+        }
+
+        if (event.ctrlKey) {
+          if (selectedElements.has(element)) {
+            selectedElements.delete(element);
+            element.classList.remove("selected");
+          } else {
+            selectedElements.add(element);
+            element.classList.add("selected");
+          }
+        } else {
+          selectedElements.add(element);
+          element.classList.add("selected");
+        }
+
+        const rect = element.getBoundingClientRect();
+        event.dataTransfer.setData(
+          "text/plain",
+          JSON.stringify({
+            startX: event.clientX,
+            startY: event.clientY,
+            offsetX: event.clientX - rect.left,
+            offsetY: event.clientY - rect.top,
+          })
+        );
+      }
+    });
 
     return element;
   }
@@ -839,125 +883,4 @@ document.addEventListener("DOMContentLoaded", () => {
 
     saveFlowchartState();
   });
-
-  // Modify the createFlowchartElement function
-  function createFlowchartElement(item) {
-    const element = document.createElement("div");
-    element.className = "flowchart-tab";
-    element.dataset.tabId = item.id;
-    element.style.left = item.left;
-    element.style.top = item.top;
-    element.innerHTML = item.content;
-    element.style.width = item.width || "auto";
-    element.style.height = item.height || "auto";
-
-    if (item.type === "box") {
-      element.classList.add("box-element");
-    }
-
-    const deleteButton = document.createElement("button");
-    deleteButton.className = "delete-button";
-    deleteButton.textContent = "X";
-    deleteButton.addEventListener("click", () => {
-      element.remove();
-      saveFlowchartState();
-    });
-
-    element.appendChild(deleteButton);
-
-    element.draggable = true;
-    element.addEventListener("dragstart", (event) => {
-      const rect = element.getBoundingClientRect();
-      event.dataTransfer.setData(
-        "text/plain",
-        JSON.stringify({
-          id: element.dataset.tabId,
-          offsetX: event.clientX - rect.left,
-          offsetY: event.clientY - rect.top,
-        })
-      );
-      element.classList.add("dragging");
-    });
-
-    element.addEventListener("dragend", () => {
-      element.classList.remove("dragging");
-    });
-
-    const tabLink = element.querySelector("span");
-    if (tabLink) {
-      tabLink.addEventListener("click", (event) => {
-        event.preventDefault();
-        chrome.tabs.update(parseInt(element.dataset.tabId), { active: true });
-      });
-    }
-
-    if (item.type === "text" || item.type === "header") {
-      element.addEventListener("input", () => {
-        element.style.width = "auto";
-        element.style.height = "auto";
-        const lines = element.innerText.split("\n");
-        const maxWidth = Math.max(
-          ...lines.map((line) => measureTextWidth(line, element))
-        );
-        element.style.width = `${maxWidth + 20}px`;
-      });
-    }
-
-    element.addEventListener("mousedown", (event) => {
-      if (selectedTool === "move") {
-        if (!event.ctrlKey && !selectedElements.has(element)) {
-          selectedElements.forEach((el) => el.classList.remove("selected"));
-          selectedElements.clear();
-        }
-
-        if (event.ctrlKey) {
-          if (selectedElements.has(element)) {
-            selectedElements.delete(element);
-            element.classList.remove("selected");
-          } else {
-            selectedElements.add(element);
-            element.classList.add("selected");
-          }
-        } else {
-          selectedElements.add(element);
-          element.classList.add("selected");
-        }
-
-        const rect = element.getBoundingClientRect();
-        event.dataTransfer.setData(
-          "text/plain",
-          JSON.stringify({
-            startX: event.clientX,
-            startY: event.clientY,
-            offsetX: event.clientX - rect.left,
-            offsetY: event.clientY - rect.top,
-          })
-        );
-      }
-    });
-
-    return element;
-  }
-
-  // Make sure to call this function whenever the flowchart state changes
-  function saveFlowchartState() {
-    const flowchartElements = Array.from(
-      document.querySelectorAll(".flowchart-tab")
-    ).map((el) => ({
-      id: el.dataset.tabId,
-      type: el.classList.contains("box-element") ? "box" : "element",
-      left: el.style.left,
-      top: el.style.top,
-      content: el.innerHTML,
-      width: el.style.width,
-      height: el.style.height,
-    }));
-
-    chrome.storage.local.set(
-      { currentFlowchartState: flowchartElements },
-      () => {
-        console.log("Flowchart state saved"); // For debugging
-      }
-    );
-  }
 });
