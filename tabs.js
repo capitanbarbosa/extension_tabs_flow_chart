@@ -328,10 +328,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
       switch (selectedTool) {
         case "text":
-          element.textContent = "Text";
-          element.contentEditable = "true";
-          element.style.minWidth = "100px";
-          element.style.minHeight = "20px";
+          const textarea = document.createElement("textarea");
+          textarea.style.width = "100%";
+          textarea.style.height = "100%";
+          textarea.style.resize = "both";
+          textarea.style.overflow = "auto";
+          element.appendChild(textarea);
+          element.style.minWidth = "50px";
+          element.style.minHeight = "50px";
           element.dataset.type = "text";
           break;
         case "header":
@@ -553,7 +557,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (item.type === "box") {
       element.classList.add("box-element");
     } else if (item.type === "text") {
-      element.contentEditable = "true";
+      const textarea = document.createElement("textarea");
+      textarea.style.width = "100%";
+      textarea.style.height = "100%";
+      textarea.style.resize = "both";
+      textarea.style.overflow = "auto";
+      textarea.value = item.content;
+      element.appendChild(textarea);
+      element.style.minWidth = "50px";
+      element.style.minHeight = "50px";
       element.dataset.type = "text";
     } else if (item.type === "header") {
       const header = element.querySelector("h1");
