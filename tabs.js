@@ -148,17 +148,24 @@ document.addEventListener("DOMContentLoaded", () => {
   function saveFlowchartState() {
     const flowchartElements = Array.from(
       document.querySelectorAll(".flowchart-tab")
-    ).map((el) => ({
-      id: el.dataset.tabId,
-      type:
-        el.dataset.type ||
-        (el.classList.contains("box-element") ? "box" : "element"),
-      left: `${parseInt(el.style.left) + flowchartArea.scrollLeft}px`,
-      top: `${parseInt(el.style.top) + flowchartArea.scrollTop}px`,
-      content: el.innerHTML,
-      width: el.style.width,
-      height: el.style.height,
-    }));
+    ).map((el) => {
+      const content =
+        el.dataset.type === "text"
+          ? el.querySelector("[contenteditable]").innerHTML
+          : el.innerHTML;
+
+      return {
+        id: el.dataset.tabId,
+        type:
+          el.dataset.type ||
+          (el.classList.contains("box-element") ? "box" : "element"),
+        left: `${parseInt(el.style.left) + flowchartArea.scrollLeft}px`,
+        top: `${parseInt(el.style.top) + flowchartArea.scrollTop}px`,
+        content: content,
+        width: el.style.width,
+        height: el.style.height,
+      };
+    });
 
     chrome.storage.local.set({ flowchartState: flowchartElements });
   }
@@ -328,14 +335,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       switch (selectedTool) {
         case "text":
-          const textarea = document.createElement("textarea");
-          textarea.style.width = "100%";
-          textarea.style.height = "100%";
-          textarea.style.resize = "both";
-          textarea.style.overflow = "auto";
-          element.appendChild(textarea);
-          element.style.minWidth = "50px";
-          element.style.minHeight = "50px";
+          element.innerHTML =
+            "<div contenteditable='true' style='font-size: 13px; font-weight: bold;'>Edit me</div>";
+          element.style.minWidth = "100px";
+          element.style.minHeight = "30px";
           element.dataset.type = "text";
           break;
         case "header":
@@ -438,15 +441,22 @@ document.addEventListener("DOMContentLoaded", () => {
   function saveState() {
     const flowchartState = Array.from(
       document.querySelectorAll(".flowchart-tab")
-    ).map((el) => ({
-      id: el.dataset.tabId,
-      type: el.classList.contains("flowchart-tab") ? "tab" : "element",
-      left: el.style.left,
-      top: el.style.top,
-      content: el.innerHTML,
-      width: el.style.width,
-      height: el.style.height,
-    }));
+    ).map((el) => {
+      const content =
+        el.dataset.type === "text"
+          ? el.querySelector("[contenteditable]").innerHTML
+          : el.innerHTML;
+
+      return {
+        id: el.dataset.tabId,
+        type: el.classList.contains("flowchart-tab") ? "tab" : "element",
+        left: el.style.left,
+        top: el.style.top,
+        content: content,
+        width: el.style.width,
+        height: el.style.height,
+      };
+    });
 
     chrome.storage.local.get("currentState", (result) => {
       const currentState = result.currentState;
@@ -550,29 +560,25 @@ document.addEventListener("DOMContentLoaded", () => {
     element.dataset.tabId = item.id;
     element.style.left = item.left;
     element.style.top = item.top;
-    element.innerHTML = item.content;
     element.style.width = item.width || "auto";
     element.style.height = item.height || "auto";
 
-    if (item.type === "box") {
-      element.classList.add("box-element");
-    } else if (item.type === "text") {
-      const textarea = document.createElement("textarea");
-      textarea.style.width = "100%";
-      textarea.style.height = "100%";
-      textarea.style.resize = "both";
-      textarea.style.overflow = "auto";
-      textarea.value = item.content;
-      element.appendChild(textarea);
-      element.style.minWidth = "50px";
-      element.style.minHeight = "50px";
+    if (item.type === "text") {
+      element.innerHTML = `<div contenteditable='true' style='font-size: 13px; font-weight: bold;'>${item.content}</div>`;
+      element.style.minWidth = "100px";
+      element.style.minHeight = "30px";
       element.dataset.type = "text";
     } else if (item.type === "header") {
-      const header = element.querySelector("h1");
-      if (header) {
-        header.contentEditable = "true";
-      }
+      element.innerHTML = `<h1 contenteditable='true'>${item.content}</h1>`;
+      element.style.minWidth = "100px";
+      element.style.minHeight = "30px";
       element.dataset.type = "header";
+    } else {
+      element.innerHTML = item.content;
+    }
+
+    if (item.type === "box") {
+      element.classList.add("box-element");
     }
 
     const deleteButton = document.createElement("button");
@@ -584,6 +590,28 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     element.appendChild(deleteButton);
+
+    const handle = document.createElement("div");
+    handle.className = "drag-handle";
+    element.appendChild(handle);
+
+    handle.draggable = true;
+    handle.addEventListener("dragstart", (event) => {
+      const rect = element.getBoundingClientRect();
+      event.dataTransfer.setData(
+        "text/plain",
+        JSON.stringify({
+          id: element.dataset.tabId,
+          offsetX: event.clientX - rect.left,
+          offsetY: event.clientY - rect.top,
+        })
+      );
+      element.classList.add("dragging");
+    });
+
+    handle.addEventListener("dragend", () => {
+      element.classList.remove("dragging");
+    });
 
     element.draggable = true;
     element.addEventListener("dragstart", (event) => {
@@ -672,15 +700,22 @@ document.addEventListener("DOMContentLoaded", () => {
   function saveCurrentState() {
     const flowchartState = Array.from(
       document.querySelectorAll(".flowchart-tab")
-    ).map((el) => ({
-      id: el.dataset.tabId,
-      type: el.classList.contains("flowchart-tab") ? "tab" : "element",
-      left: el.style.left,
-      top: el.style.top,
-      content: el.innerHTML,
-      width: el.style.width,
-      height: el.style.height,
-    }));
+    ).map((el) => {
+      const content =
+        el.dataset.type === "text"
+          ? el.querySelector("[contenteditable]").innerHTML
+          : el.innerHTML;
+
+      return {
+        id: el.dataset.tabId,
+        type: el.classList.contains("flowchart-tab") ? "tab" : "element",
+        left: el.style.left,
+        top: el.style.top,
+        content: content,
+        width: el.style.width,
+        height: el.style.height,
+      };
+    });
 
     chrome.storage.local.set({ currentFlowchartState: flowchartState }, () => {
       console.log("Current state saved");
