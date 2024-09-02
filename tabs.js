@@ -804,6 +804,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==========================
   // Arrow Relationships
   // ==========================
+  // ... existing code ...
+
   function createArrow(startTab, endTab) {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
@@ -813,28 +815,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const startRect = startHandle.getBoundingClientRect();
     const endRect = endHandle.getBoundingClientRect();
-    const flowchartRect = flowchartArea.getBoundingClientRect();
+    const canvasRect = flowchartCanvas.getBoundingClientRect();
 
     const x1 =
       startRect.left +
       startRect.width / 2 -
-      flowchartRect.left +
-      flowchartArea.scrollLeft;
+      canvasRect.left +
+      flowchartCanvas.scrollLeft;
     const y1 =
       startRect.top +
       startRect.height / 2 -
-      flowchartRect.top +
-      flowchartArea.scrollTop;
+      canvasRect.top +
+      flowchartCanvas.scrollTop;
     const x2 =
       endRect.left +
       endRect.width / 2 -
-      flowchartRect.left +
-      flowchartArea.scrollLeft;
+      canvasRect.left +
+      flowchartCanvas.scrollLeft;
     const y2 =
       endRect.top +
       endRect.height / 2 -
-      flowchartRect.top +
-      flowchartArea.scrollTop;
+      canvasRect.top +
+      flowchartCanvas.scrollTop;
+
+    console.log("Start Handle:", startRect);
+    console.log("End Handle:", endRect);
+    console.log("Canvas Area:", canvasRect);
+    console.log("Coordinates:", { x1, y1, x2, y2 });
 
     svg.style.position = "absolute";
     svg.style.left = "0";
@@ -856,6 +863,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     saveArrowRelationship(startTab, endTab);
   }
+
+  // ... existing code ...
 
   function saveArrowRelationship(startTab, endTab) {
     const arrow = {
