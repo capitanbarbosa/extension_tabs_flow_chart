@@ -973,10 +973,19 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentPath = null;
   let pathData = "";
   let svg = null;
+  let lastX = 0;
+  let lastY = 0;
+  const minDistance = 5; // Minimum distance between points
+  let hasMoved = false; // Flag to track if the mouse has moved
+
+  function distance(x1, y1, x2, y2) {
+    return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+  }
 
   flowchartCanvas.addEventListener("mousedown", (event) => {
     if (selectedTool === "freeLine") {
       isDrawing = true;
+      hasMoved = false; // Reset the flag
       if (!svg) {
         svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         svg.style.position = "absolute";
@@ -997,9 +1006,9 @@ document.addEventListener("DOMContentLoaded", () => {
       currentPath.setAttribute("fill", "none");
 
       const rect = flowchartCanvas.getBoundingClientRect();
-      const x = event.clientX - rect.left + flowchartArea.scrollLeft;
-      const y = event.clientY - rect.top + flowchartArea.scrollTop;
-      pathData = `M${x},${y}`;
+      lastX = event.clientX - rect.left + flowchartArea.scrollLeft;
+      lastY = event.clientY - rect.top + flowchartArea.scrollTop;
+      pathData = `M${lastX},${lastY}`;
       currentPath.setAttribute("d", pathData);
 
       svg.appendChild(currentPath);
@@ -1011,17 +1020,28 @@ document.addEventListener("DOMContentLoaded", () => {
       const rect = flowchartCanvas.getBoundingClientRect();
       const x = event.clientX - rect.left + flowchartArea.scrollLeft;
       const y = event.clientY - rect.top + flowchartArea.scrollTop;
-      pathData += ` L${x},${y}`;
-      currentPath.setAttribute("d", pathData);
+
+      if (distance(x, y, lastX, lastY) >= minDistance) {
+        pathData += ` L${x},${y}`;
+        currentPath.setAttribute("d", pathData);
+        lastX = x;
+        lastY = y;
+        hasMoved = true; // Set the flag to true when the mouse moves
+      }
     }
   });
 
   flowchartCanvas.addEventListener("mouseup", () => {
     if (isDrawing && selectedTool === "freeLine") {
       isDrawing = false;
+      if (!hasMoved) {
+        // If the mouse hasn't moved, remove the current path
+        svg.removeChild(currentPath);
+      } else {
+        saveFlowchartState();
+      }
       currentPath = null;
       pathData = "";
-      saveFlowchartState();
     }
   });
 });
