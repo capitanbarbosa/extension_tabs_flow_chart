@@ -174,13 +174,15 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     });
 
-    const svgPaths = Array.from(svg.querySelectorAll("path")).map((path) => {
-      return {
-        d: path.getAttribute("d"),
-        stroke: path.getAttribute("stroke"),
-        strokeWidth: path.getAttribute("stroke-width"),
-      };
-    });
+    const svgPaths = Array.from(flowchartCanvas.querySelectorAll("path")).map(
+      (path) => {
+        return {
+          d: path.getAttribute("d"),
+          stroke: path.getAttribute("stroke"),
+          strokeWidth: path.getAttribute("stroke-width"),
+        };
+      }
+    );
 
     chrome.storage.local.set({ flowchartState: flowchartElements, svgPaths });
   }
@@ -209,7 +211,10 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         if (result.svgPaths) {
-          svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          const svg = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "svg"
+          );
           svg.style.position = "absolute";
           svg.style.left = "0";
           svg.style.top = "0";
@@ -235,7 +240,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     );
   }
-
   // ==========================
   // Drag and Drop within Flowchart Area
   // ==========================
@@ -607,7 +611,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     );
   }
-
   // ==========================
   // Flowchart Element Creation
   // ==========================
