@@ -343,10 +343,10 @@ document.addEventListener("DOMContentLoaded", () => {
       switch (selectedTool) {
         case "text":
           element.innerHTML =
-            "<div contenteditable='true' style='font-size: 13px; font-weight: bold;'>Edit me</div>";
+            "<h3 contenteditable='true' style='font-weight: normal;'>Text</h3>";
           element.style.minWidth = "100px";
           element.style.minHeight = "30px";
-          element.dataset.type = "text";
+          element.dataset.type = "header";
           break;
         case "header":
           element.innerHTML = "<h1 contenteditable='true'>Header</h1>";
