@@ -587,6 +587,25 @@ document.addEventListener("DOMContentLoaded", () => {
     flowchartElements.forEach((element) => {
       flowchartCanvas.removeChild(element);
     });
+
+    // Remove all SVG elements (free-drawn lines)
+    const svgElements = flowchartCanvas.querySelectorAll("svg");
+    svgElements.forEach((svg) => {
+      flowchartCanvas.removeChild(svg);
+    });
+
+    // Clear the saved state in local storage
+    chrome.storage.local.remove(
+      [
+        "currentFlowchartState",
+        "flowchartState",
+        "svgPaths",
+        "arrowRelationships",
+      ],
+      () => {
+        console.log("Cleared flowchart state from local storage");
+      }
+    );
   }
 
   // ==========================
