@@ -174,12 +174,20 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     });
 
-    chrome.storage.local.set({ flowchartState: flowchartElements });
+    const svgPaths = Array.from(svg.querySelectorAll("path")).map((path) => {
+      return {
+        d: path.getAttribute("d"),
+        stroke: path.getAttribute("stroke"),
+        strokeWidth: path.getAttribute("stroke-width"),
+      };
+    });
+
+    chrome.storage.local.set({ flowchartState: flowchartElements, svgPaths });
   }
 
   function loadFlowchartState() {
     chrome.storage.local.get(
-      ["currentFlowchartState", "flowchartState"],
+      ["currentFlowchartState", "flowchartState", "svgPaths"],
       (result) => {
         const flowchartState =
           result.currentFlowchartState || result.flowchartState || [];
@@ -199,6 +207,29 @@ document.addEventListener("DOMContentLoaded", () => {
           const element = createFlowchartElement(item);
           flowchartCanvas.appendChild(element);
         });
+
+        if (result.svgPaths) {
+          svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          svg.style.position = "absolute";
+          svg.style.left = "0";
+          svg.style.top = "0";
+          svg.style.width = "100%";
+          svg.style.height = "100%";
+          svg.style.pointerEvents = "none";
+          flowchartCanvas.appendChild(svg);
+
+          result.svgPaths.forEach((pathData) => {
+            const path = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "path"
+            );
+            path.setAttribute("d", pathData.d);
+            path.setAttribute("stroke", pathData.stroke);
+            path.setAttribute("stroke-width", pathData.strokeWidth);
+            path.setAttribute("fill", "none");
+            svg.appendChild(path);
+          });
+        }
 
         console.log("Loaded flowchart state:", flowchartState); // For debugging
       }
@@ -936,5 +967,61 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     saveFlowchartState();
+  });
+
+  let isDrawing = false;
+  let currentPath = null;
+  let pathData = "";
+  let svg = null;
+
+  flowchartCanvas.addEventListener("mousedown", (event) => {
+    if (selectedTool === "freeLine") {
+      isDrawing = true;
+      if (!svg) {
+        svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.style.position = "absolute";
+        svg.style.left = "0";
+        svg.style.top = "0";
+        svg.style.width = "100%";
+        svg.style.height = "100%";
+        svg.style.pointerEvents = "none";
+        flowchartCanvas.appendChild(svg);
+      }
+
+      currentPath = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "path"
+      );
+      currentPath.setAttribute("stroke", "#61afef");
+      currentPath.setAttribute("stroke-width", "2");
+      currentPath.setAttribute("fill", "none");
+
+      const rect = flowchartCanvas.getBoundingClientRect();
+      const x = event.clientX - rect.left + flowchartArea.scrollLeft;
+      const y = event.clientY - rect.top + flowchartArea.scrollTop;
+      pathData = `M${x},${y}`;
+      currentPath.setAttribute("d", pathData);
+
+      svg.appendChild(currentPath);
+    }
+  });
+
+  flowchartCanvas.addEventListener("mousemove", (event) => {
+    if (isDrawing && selectedTool === "freeLine") {
+      const rect = flowchartCanvas.getBoundingClientRect();
+      const x = event.clientX - rect.left + flowchartArea.scrollLeft;
+      const y = event.clientY - rect.top + flowchartArea.scrollTop;
+      pathData += ` L${x},${y}`;
+      currentPath.setAttribute("d", pathData);
+    }
+  });
+
+  flowchartCanvas.addEventListener("mouseup", () => {
+    if (isDrawing && selectedTool === "freeLine") {
+      isDrawing = false;
+      currentPath = null;
+      pathData = "";
+      saveFlowchartState();
+    }
   });
 });
