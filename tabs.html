@@ -188,14 +188,22 @@
         background-color: rgba(97, 175, 239, 0.1);
         pointer-events: none;
       }
+      .hidden {
+        display: none;
+      }
     </style>
   </head>
   <body>
     <div id="workspaceContainer">
       <h1>Open Tabs Page</h1>
+      <!-- Hamburger icon button -->
       <ul id="tabList"></ul>
     </div>
+
+    <!-- Hamburger icon button -->
     <div id="flowchartArea">
+      <button id="toggleTabList">&#9776;</button>
+
       <div id="flowchartCanvas"></div>
     </div>
     <div id="toolSelector">

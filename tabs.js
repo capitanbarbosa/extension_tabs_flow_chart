@@ -6,6 +6,13 @@ document.addEventListener("DOMContentLoaded", () => {
   displayCurrentState();
   loadArrowRelationships();
 
+  // Add the toggle functionality for the tab list
+  const toggleTabListButton = document.getElementById("toggleTabList");
+  const workspaceContainer = document.getElementById("workspaceContainer");
+
+  toggleTabListButton.addEventListener("click", () => {
+    workspaceContainer.classList.toggle("hidden");
+  });
   // ==========================
   // Chrome Tabs Query and Grouping by windowId
   // ==========================
