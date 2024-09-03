@@ -784,6 +784,385 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.addEventListener("beforeunload", saveCurrentState);
 
+  const undoButton = document.getElementById("undoButton");
+  const addedElements = [];
+
+  // Function to add elements to the addedElements array
+  function trackElement(element) {
+    addedElements.push(element);
+  }
+
+  // Modify the existing code to track added elements
+  function createFlowchartElement(item) {
+    const element = document.createElement("div");
+    element.className = "flowchart-tab";
+    element.dataset.tabId = item.id;
+    element.style.left = item.left;
+    element.style.top = item.top;
+    element.style.width = item.width || "auto";
+    element.style.height = item.height || "auto";
+
+    if (item.type === "text") {
+      element.innerHTML = `<div contenteditable='true' style='font-size: 13px; font-weight: bold;'>${item.content}</div>`;
+      element.style.minWidth = "100px";
+      element.style.minHeight = "30px";
+      element.dataset.type = "text";
+    } else if (item.type === "header") {
+      element.innerHTML = `<h1 contenteditable='true'>${item.content}</h1>`;
+      element.style.minWidth = "100px";
+      element.style.minHeight = "30px";
+      element.dataset.type = "header";
+    } else {
+      element.innerHTML = item.content;
+    }
+
+    if (item.type === "box") {
+      element.classList.add("box-element");
+    }
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "delete-button";
+    deleteButton.textContent = "X";
+    deleteButton.addEventListener("click", () => {
+      element.remove();
+      saveFlowchartState();
+    });
+
+    element.appendChild(deleteButton);
+
+    const handle = document.createElement("div");
+    handle.className = "drag-handle";
+    element.appendChild(handle);
+
+    handle.draggable = true;
+    handle.addEventListener("dragstart", (event) => {
+      const rect = element.getBoundingClientRect();
+      event.dataTransfer.setData(
+        "text/plain",
+        JSON.stringify({
+          id: element.dataset.tabId,
+          offsetX: event.clientX - rect.left,
+          offsetY: event.clientY - rect.top,
+        })
+      );
+      element.classList.add("dragging");
+    });
+
+    handle.addEventListener("dragend", () => {
+      element.classList.remove("dragging");
+    });
+
+    element.draggable = true;
+    element.addEventListener("dragstart", (event) => {
+      const rect = element.getBoundingClientRect();
+      event.dataTransfer.setData(
+        "text/plain",
+        JSON.stringify({
+          id: element.dataset.tabId,
+          offsetX: event.clientX - rect.left,
+          offsetY: event.clientY - rect.top,
+        })
+      );
+      element.classList.add("dragging");
+    });
+
+    element.addEventListener("dragend", () => {
+      element.classList.remove("dragging");
+    });
+
+    const tabLink = element.querySelector("span");
+    if (tabLink) {
+      tabLink.addEventListener("click", (event) => {
+        event.preventDefault();
+        chrome.tabs.update(parseInt(element.dataset.tabId), { active: true });
+      });
+    }
+
+    if (item.type === "text" || item.type === "header") {
+      element.addEventListener("input", () => {
+        element.style.width = "auto";
+        element.style.height = "auto";
+        const lines = element.innerText.split("\n");
+        const maxWidth = Math.max(
+          ...lines.map((line) => measureTextWidth(line, element))
+        );
+        element.style.width = `${maxWidth + 20}px`;
+      });
+    }
+
+    element.addEventListener("mousedown", (event) => {
+      if (selectedTool === "move") {
+        if (!event.ctrlKey && !selectedElements.has(element)) {
+          selectedElements.forEach((el) => el.classList.remove("selected"));
+          selectedElements.clear();
+        }
+
+        if (event.ctrlKey) {
+          if (selectedElements.has(element)) {
+            selectedElements.delete(element);
+            element.classList.remove("selected");
+          } else {
+            selectedElements.add(element);
+            element.classList.add("selected");
+          }
+        } else {
+          selectedElements.add(element);
+          element.classList.add("selected");
+        }
+
+        const rect = element.getBoundingClientRect();
+        event.dataTransfer.setData(
+          "text/plain",
+          JSON.stringify({
+            startX: event.clientX,
+            startY: event.clientY,
+            offsetX: event.clientX - rect.left,
+            offsetY: event.clientY - rect.top,
+          })
+        );
+      }
+    });
+
+    trackElement(element); // Track the element
+    return element;
+  }
+
+  flowchartCanvas.addEventListener("drop", (event) => {
+    event.preventDefault();
+    const draggedTabId = event.dataTransfer.getData("text/plain");
+    const existingFlowchartTab = document.querySelector(
+      `.flowchart-tab[data-tab-id="${draggedTabId}"]`
+    );
+
+    if (existingFlowchartTab) {
+      existingFlowchartTab.style.left = `${
+        event.clientX - flowchartArea.offsetLeft + flowchartArea.scrollLeft
+      }px`;
+      existingFlowchartTab.style.top = `${
+        event.clientY - flowchartArea.offsetTop + flowchartArea.scrollTop
+      }px`;
+    } else {
+      const draggedElement = document.querySelector(
+        `li[data-tab-id="${draggedTabId}"]`
+      );
+      if (draggedElement) {
+        const flowchartTab = document.createElement("div");
+        flowchartTab.className = "flowchart-tab";
+        flowchartTab.dataset.tabId = draggedTabId;
+
+        const img = document.createElement("img");
+        img.src = draggedElement.querySelector("img").src;
+        img.alt = "Tab Icon";
+        img.style.width = "16px";
+        img.style.height = "16px";
+        img.style.marginRight = "8px";
+
+        const text = document.createElement("span");
+        text.textContent = draggedElement.querySelector("a").textContent;
+
+        flowchartTab.appendChild(img);
+        flowchartTab.appendChild(text);
+
+        const handle = document.createElement("div");
+        handle.className = "drag-handle";
+        flowchartTab.appendChild(handle);
+
+        flowchartTab.style.left = `${
+          event.clientX - flowchartArea.offsetLeft + flowchartArea.scrollLeft
+        }px`;
+        flowchartTab.style.top = `${
+          event.clientY - flowchartArea.offsetTop + flowchartArea.scrollTop
+        }px`;
+
+        handle.draggable = true;
+        handle.addEventListener("dragstart", (event) => {
+          const rect = flowchartTab.getBoundingClientRect();
+          event.dataTransfer.setData(
+            "text/plain",
+            JSON.stringify({
+              id: flowchartTab.dataset.tabId,
+              offsetX: event.clientX - rect.left,
+              offsetY: event.clientY - rect.top,
+            })
+          );
+          flowchartTab.classList.add("dragging");
+        });
+
+        handle.addEventListener("dragend", () => {
+          flowchartTab.classList.remove("dragging");
+        });
+
+        flowchartTab.addEventListener("click", (event) => {
+          event.preventDefault();
+          chrome.tabs.update(parseInt(flowchartTab.dataset.tabId), {
+            active: true,
+          });
+        });
+
+        flowchartCanvas.appendChild(flowchartTab);
+        trackElement(flowchartTab); // Track the element
+      }
+    }
+    saveFlowchartState();
+  });
+
+  flowchartCanvas.addEventListener("click", (event) => {
+    if (!selectedTool || selectedTool === "move") return;
+
+    if (event.target.closest("#toolSelector")) return;
+
+    if (
+      event.target.closest(".flowchart-tab[contenteditable='true']") ||
+      event.target.closest(".flowchart-tab h1[contenteditable='true']")
+    ) {
+      return;
+    }
+
+    if (selectedTool !== "relationship") {
+      const element = document.createElement("div");
+      element.className = "flowchart-tab";
+      element.dataset.tabId = Date.now().toString();
+      element.style.left = `${
+        event.clientX - flowchartArea.offsetLeft + flowchartArea.scrollLeft
+      }px`;
+      element.style.top = `${
+        event.clientY - flowchartArea.offsetTop + flowchartArea.scrollTop
+      }px`;
+
+      switch (selectedTool) {
+        case "text":
+          element.innerHTML =
+            "<h3 contenteditable='true' style='font-weight: normal;'>Text</h3>";
+          element.style.minWidth = "100px";
+          element.style.minHeight = "30px";
+          element.dataset.type = "header";
+          break;
+        case "header":
+          element.innerHTML = "<h1 contenteditable='true'>Header</h1>";
+          element.style.minWidth = "100px";
+          element.style.minHeight = "30px";
+          element.dataset.type = "header";
+          break;
+        case "box":
+          element.classList.add("box-element");
+          element.style.border = "2px dashed #d0d3d9";
+          element.style.backgroundColor = "transparent";
+          element.style.width = "100px";
+          element.style.height = "100px";
+          element.style.resize = "both";
+          element.style.overflow = "auto";
+          break;
+        case "arrow":
+          element.innerHTML = "→";
+          element.style.fontSize = "24px";
+          break;
+      }
+
+      const handle = document.createElement("div");
+      handle.className = "drag-handle";
+      element.appendChild(handle);
+
+      handle.draggable = true;
+      handle.addEventListener("dragstart", (event) => {
+        const rect = element.getBoundingClientRect();
+        event.dataTransfer.setData(
+          "text/plain",
+          JSON.stringify({
+            id: element.dataset.tabId || "",
+            offsetX: event.clientX - rect.left,
+            offsetY: event.clientY - rect.top,
+          })
+        );
+        element.classList.add("dragging");
+      });
+
+      handle.addEventListener("dragend", () => {
+        element.classList.remove("dragging");
+      });
+
+      flowchartCanvas.appendChild(element);
+      trackElement(element); // Track the element
+      saveFlowchartState();
+    } else if (selectedTool === "relationship") {
+      const handle = event.target.closest(".drag-handle");
+      if (handle) {
+        if (!firstHandle) {
+          firstHandle = handle;
+        } else {
+          createArrow(firstHandle, handle);
+          firstHandle = null;
+        }
+      }
+    }
+  });
+
+  flowchartCanvas.addEventListener("dragover", (event) => {
+    event.preventDefault();
+  });
+
+  flowchartCanvas.addEventListener("drop", (event) => {
+    event.preventDefault();
+    const data = JSON.parse(event.dataTransfer.getData("text/plain"));
+    const draggingElement = document.querySelector(
+      `.flowchart-tab[data-tab-id="${data.id}"]`
+    );
+    if (draggingElement) {
+      draggingElement.style.left = `${
+        event.clientX -
+        data.offsetX -
+        flowchartArea.offsetLeft +
+        flowchartArea.scrollLeft
+      }px`;
+      draggingElement.style.top = `${
+        event.clientY -
+        data.offsetY -
+        flowchartArea.offsetTop +
+        flowchartArea.scrollTop
+      }px`;
+      draggingElement.classList.remove("dragging");
+    }
+    saveFlowchartState();
+  });
+
+  // Undo button functionality
+  undoButton.addEventListener("click", () => {
+    const lastElement = addedElements.pop();
+    if (lastElement) {
+      lastElement.remove();
+      saveFlowchartState();
+    }
+  });
+
+  // ==========================
+  // Save Current State
+  // ==========================
+  function saveCurrentState() {
+    const flowchartState = Array.from(
+      document.querySelectorAll(".flowchart-tab")
+    ).map((el) => {
+      const content =
+        el.dataset.type === "text"
+          ? el.querySelector("[contenteditable]").innerHTML
+          : el.innerHTML;
+
+      return {
+        id: el.dataset.tabId,
+        type: el.classList.contains("flowchart-tab") ? "tab" : "element",
+        left: el.style.left,
+        top: el.style.top,
+        content: content,
+        width: el.style.width,
+        height: el.style.height,
+      };
+    });
+
+    chrome.storage.local.set({ currentFlowchartState: flowchartState }, () => {
+      console.log("Current state saved");
+    });
+  }
+
+  window.addEventListener("beforeunload", saveCurrentState);
+
   let firstTab = null;
 
   flowchartCanvas.addEventListener("click", (event) => {
